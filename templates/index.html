@@ -1,67 +1,108 @@
+```html
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
         <title>Project Designer</title>
         <meta charset="UTF-8">
         <meta name="description" content="Project Planner">
-        <meta name="viewport" content="width=divice-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="author" content="Daniel Blasczyk">
 
-
-        <!--===== CSS ===== -->
-        <link rel="stylesheet" href="assets/css/main.css">
+        <!-- CSS -->
+        <link
+            rel="stylesheet"
+            href="{{ url_for('static', filename='css/main.css') }}"
+        >
     </head>
 
     <body>
-        <header> 
+        <header>
             <h1>Project Designer</h1>
+
             <nav class="project_steps">
                 <ul>
-                    <li><a href="index.html">Overview</a></li>
-                    <li><a href="design.html">Design</a></li>
-                    <li><a href ="build.html">Build Plan</a></li>
-                    <li><a href="log.html">Build Log</a></li>
-                    <li><a href="learning.html">Learning</a></li>
-                    <li><a href="testing.html">Testing</a></li>
-                    <li><a href="write_up.html">Project Write-Up</a></li>
-                    <li><a href="retrospective.html">Retrospective</a></li>
-                    <li><a href="interview_prep.html">Interview Preparation</a></li>
+                    <li><a href="{{ url_for('index') }}">Overview</a></li>
+                    <li><a href="{{ url_for('design') }}">Design</a></li>
+                    <li><a href="{{ url_for('build') }}">Build Plan</a></li>
+                    <li><a href="{{ url_for('log') }}">Build Log</a></li>
+                    <li><a href="{{ url_for('learning') }}">Learning</a></li>
+                    <li><a href="{{ url_for('testing') }}">Testing</a></li>
+                    <li><a href="{{ url_for('write_up') }}">Project Write-Up</a></li>
+                    <li><a href="{{ url_for('retrospective') }}">Retrospective</a></li>
+                    <li><a href="{{ url_for('interview_prep') }}">Interview Preparation</a></li>
                 </ul>
-
             </nav>
         </header>
 
         <main>
+            <section>
+                <h2>Overview</h2>
 
-        <!--===== Project Overview ===== -->
-        <section>
-            <h2>Overview</h2>
-            <p>What is this project building?</p>
-            <form method="post">
-            <input type="text" name="Project Title" required>
-            <br><br>
-            <h2>Project Description</h2>
-            <p> Give me a short one to two sentance description of you project.</p>
-            <form method="post">
-            <input type="text" name="Project Description" required>
-            <br><br>
-            <!-- Provide a way for -->
-            <h2>Why this Project?</h2>
-            <p>What capability am I trying to develop?</p>
-            <form method="post">
-            <input type="text" name="Why this Project?" required>
-            <br><br>
+                <form method="POST">
+                    <div>
+                        <label for="project_title">
+                            What is this project building?
+                        </label>
 
-            <input type="submit" value="Submit">
-            </form>
-            
-        </section>
+                        <input
+                            type="text"
+                            id="project_title"
+                            name="project_title"
+                            required
+                        >
+                    </div>
 
-        <!--===== Project Overview ===== -->
+                    <div>
+                        <h2>Project Description</h2>
 
+                        <label for="project_description">
+                            Give a short one- to two-sentence description of your project.
+                        </label>
+
+                        <textarea
+                            id="project_description"
+                            name="project_description"
+                            rows="4"
+                            required
+                        ></textarea>
+                    </div>
+
+                    <div>
+                        <h2>Why This Project?</h2>
+
+                        <label for="project_reason">
+                            What capability are you trying to develop?
+                        </label>
+
+                        <textarea
+                            id="project_reason"
+                            name="project_reason"
+                            rows="4"
+                            required
+                        ></textarea>
+                    </div>
+
+                    <div>
+                        <h2>Success Criteria</h2>
+
+                        <label for="success_criteria">
+                            This project is complete when...
+                        </label>
+
+                        <textarea
+                            id="success_criteria"
+                            name="success_criteria"
+                            rows="4"
+                            required
+                        ></textarea>
+                    </div>
+
+                    <button type="submit">Save Overview</button>
+                </form>
+            </section>
         </main>
-
 
         <footer></footer>
     </body>
 </html>
+```
