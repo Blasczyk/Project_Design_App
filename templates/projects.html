@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Project Designer</title>
+    <meta charset="UTF-8">
+    <meta name="description" content="Project Planner">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Daniel Blasczyk">
+
+    <!-- CSS -->
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/main.css') }}"
+    >
+</head>
+
+<body>
+    <header>
+        <h1>Projects</h1>
+    </header>
+    <section>
+        <h2>Project List</h2>
+
+        <ul>
+            {% for project in projects %}
+                <li>
+                    <a href="{{ url_for('project_overview', project_id=project.id) }}">
+                        {{ project.title }}
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <a href="{{ url_for('create_project') }}">Create New Project</a>
+    </section>  
+</body>
+</html>

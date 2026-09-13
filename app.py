@@ -1,21 +1,28 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
+
 app = Flask(__name__)
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if request.method == 'POST':
-        # Handle form submission here
-        project_title = request.form['project_title']
-        project_description = request.form['project_description']
-        project_reason = request.form['project_reason']
-        success_criteria = request.form['success_criteria']
+@app.route("/", methods=["GET", "POST"])
+def dashboard():
+    pass
+    return render_template("projects.html")
+    
+
+
+@app.route("/overview", methods=["GET", "POST"])
+def overview():
+    if request.method == "POST":
+        project_title = request.form["project_title"]
+        project_description = request.form["project_description"]
+        project_reason = request.form["project_reason"]
+        success_criteria = request.form["success_criteria"]
 
         print(project_title)
         print(project_description)
         print(project_reason)
         print(success_criteria)
-        
-    return render_template('index.html')
+
+    return render_template("index.html")
 
 
 @app.route("/design")
