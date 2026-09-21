@@ -26,27 +26,39 @@ projects = [
         "last_updated": "2026-09-11"
     }
 ]
-@app.route("/")
+
+@app.route("/", methods = ['Get', 'Post'] )
 def dashboard():
     return render_template("projects.html", projects=projects)
     
 
 
-# @app.route("/overview", methods=["GET", "POST"])
-# def overview():
-#     if request.method == "POST":
-#         project_title = request.form["project_title"]
-#         project_description = request.form["project_description"]
-#         project_reason = request.form["project_reason"]
-#         success_criteria = request.form["success_criteria"]
+@app.route("/projects/<int:project_id>")
+def project_overview(project_id):
+    project = next(
+        (project for project in projects if project["id"] == project_id),
+        None
+    )
 
-#         print(project_title)
-#         print(project_description)
-#         print(project_reason)
-#         print(success_criteria)
+    if project is None:
+        return "Project n0t found", 404
+    return render_template("project_overview.html", project = project)
 
-#     return render_template("index.html")
+@app.route("/projects/new", methods=["GET","POST"]):
+def create_project():
 
+    if request.method == "POST":
+         # Later:
+        # 1. Read form
+        # 2. Validate
+        # 3. Generate ID
+        # 4. Create project
+        # 5. Add to projects
+        # 6. Redirect to new project
+        pass
+
+    # Get ends here.
+    return render_template("create_project.html")
 
 # @app.route("/design")
 # def design():
