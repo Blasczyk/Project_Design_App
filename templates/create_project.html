@@ -2,8 +2,20 @@
 <html>
     <body>
         <header> Create Project</header>
-        <body>
-            <p> This is the start of</p>
-        </body>
+            <form action="{{ url_for('create_project') }}" method="post">
+                <label for="title"> Project Title</label>
+                <input type="text" id="title" name="title" required> 
+                <br><br>
+                <label for="what">What am I building:</label>
+                <textarea id="what" name="what" required></textarea>
+                <br><br>
+                <label for="why">Why this Project:</label>
+                <textarea id="why" name="why" required></textarea>
+                <br><br>
+                <label for="success">This project has succeeded when.</label>
+                <textarea id="success" name="success" required></textarea>
+                <br><br>
+                <button type="submit"> Submit</button>
+            </form>
     </body>
 </html>
