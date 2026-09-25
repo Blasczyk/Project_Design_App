@@ -8,7 +8,9 @@
             <div id="Menu">
                 <ol>
                     <li class="active"><a href="#"> Project Dashboard</a></li>
-                    <li><a href="/templates/design.html"> Design</a></li>
+                    <a href="{{ url_for('design.html', project_id=project['id']) }}">
+                        Design
+                    </a>
                     <li><a href="#"> Build Plan</a></li>
                     <li><a href="#"> Build Log</a></li>
                     <li><a href="#"> Learning</a></li>

@@ -7,7 +7,9 @@
             <h1> Project Design</h1> 
             <nav>
                 <ul>
-                    <li><a href="#"> Project Dashboard</a></li>
+                    <a href="{{ url_for('project_dashboard', project_id=project['id']) }}">
+                        Project Dashboard
+                    </a>
                     <li><a href="#"> Goal</a></li>
                     <li><a href="#"> Requirements</a></li>
                     <li><a href="#"> Architecture</a></li>
@@ -16,7 +18,7 @@
             </nav>
         </header>
 
-        <form action="{{url_for('design') }}" method="post">
+        <form action="{{ url_for('design', project_id=project['id']) }}" method="post">
             <h2>Problem</h2>
             <label for="problem">What problem does this project solve? or who
                 is this system for? </label>

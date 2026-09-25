@@ -33,20 +33,6 @@ def Project_Repo():
     
 
 
-@app.route("/projects/<int:project_id>")
-def dashboard(project_id):
-    project = next(
-        (project for project in projects if project["id"] == project_id),
-        None
-    )
-
-    if project is None:
-        return "Project n0t found", 404
-    return render_template("project_dashboard.html", project = project)
-
-
-
-
 @app.route("/projects/new", methods=["GET","POST"])
 def create_project():
 
@@ -82,21 +68,41 @@ def create_project():
         # 4. Create project
         # 5. Add to projects
         # 6. Redirect to new project
-        return redirect(url_for("dashboard", project_id=new_id))
+        return redirect(url_for("project_dashboard.html", project_id=new_id))
 
     # Get ends here.
     return render_template("create_project.html")
 
-@app.route("/design", methods=["Get","POST"])
-def design():
+
+@app.route("/projects/<int:project_id>")
+def project_dashboard(project_id):
+    project = next(
+        (project for project in projects if project["id"] == project_id),
+        None
+    )
+
+    if project is None:
+        return "Project n0t found", 404
+    return render_template("project_dashboard.html", project = project)
+
+@app.route("/projects/<int:project_id>/design", methods=["GET", "POST"])
+def design(project_id):
+
+    project = next(
+        (project for project in projects if project["id"] == project_id),
+        None
+    )
+
+    if project is None:
+        return "Project not found", 404
 
     if request.method == "POST":
         problem = request.form.get("problem")
-        must_have = request.form.get("must_have")
-        nice_to_have = request.form.get("nice_have")
-        constraints = request.form.get("contraints")
-        architecture = request.form.get("arcitecture")
-        risks = request.form.get("risks")
+        must_have = request.form.getlist("must_have")
+        nice_to_have = request.form.getlist("nice_have")
+        constraints = request.form.getlist("constraints")
+        architecture = request.form.get("architecture")
+        risks = request.form.getlist("risks")
 
         print(problem)
         print(must_have)
@@ -105,8 +111,10 @@ def design():
         print(architecture)
         print(risks)
 
-
-    return render_template("design.html")
+    return render_template(
+        "design.html",
+        project=project
+    )
 
 
 # @app.route("/build")
