@@ -24,7 +24,7 @@
         <ul>
             {% for project in projects %}
                 <li>
-                    <a href="{{ url_for('project_overview', project_id=project.id) }}">
+                    <a href="{{ url_for('project_dashboard', project_id=project.id) }}">
                         {{ project.title }}
                     </a>
                 </li>

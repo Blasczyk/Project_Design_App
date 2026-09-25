@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for
 
 app = Flask(__name__)
 
@@ -28,13 +28,13 @@ projects = [
 ]
 
 @app.route("/", methods = ['Get'] )
-def dashboard():
+def Project_Repo():
     return render_template("projects.html", projects=projects)
     
 
 
 @app.route("/projects/<int:project_id>")
-def project_overview(project_id):
+def dashboard(project_id):
     project = next(
         (project for project in projects if project["id"] == project_id),
         None
@@ -42,7 +42,10 @@ def project_overview(project_id):
 
     if project is None:
         return "Project n0t found", 404
-    return render_template("project_overview.html", project = project)
+    return render_template("project_dashboard.html", project = project)
+
+
+
 
 @app.route("/projects/new", methods=["GET","POST"])
 def create_project():
@@ -58,6 +61,7 @@ def create_project():
         print(why_building)
         print(success)
 
+        new_id = max((project["id"] for project in projects), default=0)+1
 
         new_project= {
             "id": new_id,
@@ -70,6 +74,7 @@ def create_project():
             "progress": 0,
             "next_action": "Complete project design",
         }
+        projects.append(new_project)
          # Later:
         # 1. Read form
         # 2. Validate
@@ -77,14 +82,31 @@ def create_project():
         # 4. Create project
         # 5. Add to projects
         # 6. Redirect to new project
-        
+        return redirect(url_for("dashboard", project_id=new_id))
 
     # Get ends here.
     return render_template("create_project.html")
 
-# @app.route("/design")
-# def design():
-#     return render_template("design.html")
+@app.route("/design", methods=["Get","POST"])
+def design():
+
+    if request.method == "POST":
+        problem = request.form.get("problem")
+        must_have = request.form.get("must_have")
+        nice_to_have = request.form.get("nice_have")
+        constraints = request.form.get("contraints")
+        architecture = request.form.get("arcitecture")
+        risks = request.form.get("risks")
+
+        print(problem)
+        print(must_have)
+        print(nice_to_have)
+        print(constraints)
+        print(architecture)
+        print(risks)
+
+
+    return render_template("design.html")
 
 
 # @app.route("/build")

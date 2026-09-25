@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+    
+
+    <body>
+        <header> 
+            <h1> Project Design</h1> 
+            <nav>
+                <ul>
+                    <li><a href="#"> Project Dashboard</a></li>
+                    <li><a href="#"> Goal</a></li>
+                    <li><a href="#"> Requirements</a></li>
+                    <li><a href="#"> Architecture</a></li>
+                    <li><a href="#"> Risks / Unkowns</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <form action="{{url_for('design') }}" method="post">
+            <h2>Problem</h2>
+            <label for="problem">What problem does this project solve? or who
+                is this system for? </label>
+            <textarea id="problem" name="problem" required></textarea>
+            <br><br>
+            <h2>Requirements</h2>
+            <br>
+            <h3>Must Have</h3>
+            <div id="must-have-list">
+            </div>
+            <button 
+                type="button"
+                onclick="addBullet('must-have-list', 'must_have')">
+                + Add Requirement
+            </button>
+
+            <br>
+            <h3>Nice To Have</h3>
+            <div id="nice-have-list"></div>
+            <button
+                type="button"
+                onclick="addBullet('nice-have-list','nice_have')">
+                + Add Requirement
+            </button>
+            
+
+            <br>
+            <h3>Constraints</h3>
+            <div id="constraint-list"></div>
+            <button 
+                type="button"
+                onclick="addBullet('constraint-list','constraints')">
+            + Add Requirement
+            </button>
+                
+
+            <br><br>
+            <h2>Architecture</h2>
+            <br>
+            <h3>Description of the componnets and how they interact</h3>
+            <br>
+            <label for="architecture">Description of the componnets and how they interact</label>
+            <textarea id="architecture" name="architecture" required></textarea>
+            <br>
+            <h3>Technology choices</h3>
+            
+
+            <br><br>
+            <h2>Risks / Unknowns</h2>
+            <br>
+            <label for="risks">What do I currently not know how to do?(These should be learning targets)</label>
+            <textarea id="risks" name="risks" required></textarea>
+
+        </form>
+
+    </body>
+</html>
