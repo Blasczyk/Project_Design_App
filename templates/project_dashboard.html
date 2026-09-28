@@ -8,18 +8,21 @@
             <div id="Menu">
                 <ol>
                     <li class="active"><a href="#"> Project Dashboard</a></li>
-                    <a href="{{ url_for('design.html', project_id=project['id']) }}">
+                    <a href="{{ url_for('design', project_id=project['id']) }}">
                         Design
                     </a>
-                    <li><a href="#"> Build Plan</a></li>
-                    <li><a href="#"> Build Log</a></li>
-                    <li><a href="#"> Learning</a></li>
-                    <li><a href="#"> Testing</a></li>
-                    <li><a href="#"> Final Architecture</a></li>
-                    <li><a href="#"> Project Write-Up</a></li>
-                    <li><a href="#"> Retrospection</a></li>
-                    <li><a href="#"> Interview Prep</a></li>
-                    <li><a href="#"> Portfolio / Resume Material</a></li>
+                    <li><a href="{{ url_for('build', project_id=project['id'])}}"> 
+                        Build Plan</a></li>
+                    <!-- <li><a href="{{ url_for('build', project_id=project['id'])}}">
+                        Build Log</a></li>
+                    <li><a href="{{ url_for('build_plan', project_id=project['id'])}}">
+                         Learning</a></li>
+                    <li><a href="{{ url_for('build_plan', project_id=project['id'])}}"> Testing</a></li>
+                    <li><a href="{{ url_for('build_plan', project_id=project['id'])}}"> Final Architecture</a></li>
+                    <li><a href="{{ url_for('build_plan', project_id=project['id'])}}"> Project Write-Up</a></li>
+                    <li><a href="{{ url_for('build_plan', project_id=project['id'])}}"> Retrospection</a></li>
+                    <li><a href="{{ url_for('build_plan', project_id=project['id'])}}"> Interview Prep</a></li>
+                    <li><a href="{{ url_for('build_plan', project_id=project['id'])}}"> Portfolio / Resume Material</a></li> -->
 
                 </ol>
             </div>

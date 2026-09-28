@@ -117,9 +117,21 @@ def design(project_id):
     )
 
 
-# @app.route("/build")
-# def build():
-#     return render_template("build.html")
+@app.route("/projects/<int:project_id>/build", methods =["GET","POST"])
+def build(project_id):
+
+    project = next(
+            (project for project in projects if project["id"] == project_id),
+            None
+        )
+    
+    if project is None:
+        return "Project not found", 404
+
+    if request.method == "POST":
+        print("helloworld")
+        
+    return render_template("build.html", project= project)
 
 
 # @app.route("/testing")

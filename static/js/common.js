@@ -4,14 +4,18 @@ function addBullet(listID, inputName){
     const item = document.createElement("div");
     item.className = "bullet-item";
 
-    item.innerHTML = `
-        <span>•</span>
-        <input
-            type="text"
-            name="${inputName}"
-            placeholder="Enter item"
-        >
-    `;
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.name =  `${inputName}_completed`;
+
+    const text = document.createElement("input");
+    text.type = "text";
+    text.name = inputName;
+    text.placeholder = "Enter item";
+
+    item.appendChild(checkbox);
+    item.appendChild(text);
 
     list.appendChild(item);
+    
 }
