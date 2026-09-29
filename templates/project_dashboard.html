@@ -3,26 +3,25 @@
 
 <body>
     <header> 
-        <h1>Project Dashboard</h1>
+        <h1>Project Dashboard: {{project.title}}</h1>
         <nav>
             <div id="Menu">
                 <ol>
                     <li class="active"><a href="#"> Project Dashboard</a></li>
-                    <a href="{{ url_for('design', project_id=project['id']) }}">
+                    <a href="{{ url_for('design', project_id=project.id) }}">
                         Design
                     </a>
-                    <li><a href="{{ url_for('build', project_id=project['id'])}}"> 
+                    <li><a href="{{ url_for('build', project_id=project['id']) }}"> 
                         Build Plan</a></li>
-                    <!-- <li><a href="{{ url_for('build', project_id=project['id'])}}">
-                        Build Log</a></li>
-                    <li><a href="{{ url_for('build_plan', project_id=project['id'])}}">
-                         Learning</a></li>
-                    <li><a href="{{ url_for('build_plan', project_id=project['id'])}}"> Testing</a></li>
-                    <li><a href="{{ url_for('build_plan', project_id=project['id'])}}"> Final Architecture</a></li>
-                    <li><a href="{{ url_for('build_plan', project_id=project['id'])}}"> Project Write-Up</a></li>
-                    <li><a href="{{ url_for('build_plan', project_id=project['id'])}}"> Retrospection</a></li>
-                    <li><a href="{{ url_for('build_plan', project_id=project['id'])}}"> Interview Prep</a></li>
-                    <li><a href="{{ url_for('build_plan', project_id=project['id'])}}"> Portfolio / Resume Material</a></li> -->
+                    <li><a href="#"> Build Log</a></li>
+                    <li><a href="#"> Learning</a></li>
+                    <li><a href="{{ url_for('testing', project_id=project['id']) }}"> 
+                        Testing</a></li>
+                    <li><a href="#"> Final Architecture</a></li>
+                    <li><a href="#"> Project Write-Up</a></li>
+                    <li><a href="#"> Retrospection</a></li>
+                    <li><a href="#"> Interview Prep</a></li>
+                    <li><a href="#"> Portfolio / Resume Material</a></li>
 
                 </ol>
             </div>
@@ -33,6 +32,19 @@
         <!-- Create a outline of what is done here, everything should be static
           on this page. We should Just see the basic outline of completed part. 
           Maybe a percent completion as well in the header.-->
+        <section> 
+            <h2>Project Overview</h2>
+            <h3>What I am building</h3>
+                <h4>{{project.what}}</h4>
+            <h3>Why this Project:</h3>
+             <h4>{{project.why}}</h4>
+            <h3>This Project will be successful if:</h3>
+                <h4>{{project.success}}</h4>
+          </section>
+          <section> 
+            <h2> Project Design</h2>
+
+          </section>
     </main>
 </body>
-</html>
+</html> 
