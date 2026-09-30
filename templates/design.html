@@ -21,7 +21,7 @@
         <form action="{{ url_for('design', project_id=project['id']) }}" method="post">
             <h2>Problem</h2>
             <label for="problem">What problem does this project solve? or who
-                is this system for? </label>
+                is this system for? </label><br>
             <textarea id="problem" name="problem" required></textarea>
             <br><br>
             <h2>Requirements</h2>
@@ -61,6 +61,7 @@
             <h3>Description of the componnets and how they interact</h3>
             <br>
             <label for="architecture">Description of the componnets and how they interact</label>
+            <br>
             <textarea id="architecture" name="architecture" required></textarea>
             <br>
             <h3>Technology choices</h3>
@@ -70,9 +71,14 @@
             <h2>Risks / Unknowns</h2>
             <br>
             <label for="risks">What do I currently not know how to do?(These should be learning targets)</label>
-            <textarea id="risks" name="risks" required></textarea>
+            <div id="risk-list"></div>
+            <button
+                type="button"
+                onclick="addBullet('risk-list','risks')">
+            + Add Risk
+            </button>
 
         </form>
-
+    <script src="{{ url_for('static', filename='js/design.js') }}"></script>
     </body>
 </html>

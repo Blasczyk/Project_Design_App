@@ -53,15 +53,19 @@ def project_dashboard(project_id):
                             project = project)
 
 
-@app.route("/projects/<int:project_id>/design", methods=["GET", "POST"])
+@app.route(
+    "/projects/<int:project_id>/design",
+    methods=["GET", "POST"]
+)
 def design(project_id):
 
     project = get_project(project_id)
-    
+
     if project is None:
         return "Project not found", 404
 
     if request.method == "POST":
+
         problem = request.form.get("problem")
         must_have = request.form.getlist("must_have")
         nice_to_have = request.form.getlist("nice_have")
@@ -69,12 +73,22 @@ def design(project_id):
         architecture = request.form.get("architecture")
         risks = request.form.getlist("risks")
 
-        print(problem)
-        print(must_have)
-        print(nice_to_have)
-        print(constraints)
-        print(architecture)
-        print(risks)
+        design_project(
+            project_id,
+            problem,
+            architecture,
+            must_have,
+            nice_to_have,
+            constraints,
+            risks
+        )
+
+        return redirect(
+            url_for(
+                "project_dashboard",
+                project_id=project_id
+            )
+        )
 
     return render_template(
         "design.html",

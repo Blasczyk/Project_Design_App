@@ -29,6 +29,34 @@ def init_db():
         )
     """)
 
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS project_design (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL UNIQUE,
+            problem TEXT,
+            architecture TEXT,
+
+            FOREIGN KEY (project_id)
+                REFERENCES projects(id)
+                ON DELETE CASCADE
+        )
+    """)
+
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS design_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            item_type TEXT NOT NULL,
+            text TEXT NOT NULL,
+            completed INTEGER NOT NULL DEFAULT 0,
+            position INTEGER NOT NULL DEFAULT 0,
+
+            FOREIGN KEY (project_id)
+                REFERENCES projects(id)
+                ON DELETE CASCADE
+        )
+    """)
+
     connection.commit()
     connection.close()
 
@@ -87,24 +115,88 @@ def get_all_projects():
 
 
 
-def design_project(problem, must_have, nice_to_have, 
-                   constraints, architecture, risks):
+def design_project(
+    project_id,
+    problem,
+    architecture,
+    must_have,
+    nice_to_have,
+    constraints,
+    risks
+):
     connection = get_connection()
 
     connection.execute(
         """
-         INSERT INTO projects (
-                problem,
-                must_have,
-                nice_to_have, 
-                constraints,
-                architecture,
-                risks
-                )
-                VALUES(?, ?, ?, ?, ?, ?)
+        INSERT INTO project_design (
+            project_id,
+            problem,
+            architecture
+        )
+        VALUES (?, ?, ?)
         """,
-        (problem, must_have, nice_to_have, 
-                   constraints, architecture, risks)
+        (
+            project_id,
+            problem,
+            architecture
+        )
     )
+
+    for position, item in enumerate(must_have):
+        connection.execute(
+            """
+            INSERT INTO design_items (
+                project_id,
+                item_type,
+                text,
+                position
+            )
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                project_id,
+                "must_have",
+                item,
+                position
+            )
+        )
+
+        for position, item in enumerate(nice_to_have):
+            connection.execute(
+                """
+                INSERT INTO design_items (
+                    project_id,
+                    item_type,
+                    text,
+                    position
+                )
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    project_id,
+                    "nice_to_have",
+                    item,
+                    position
+                )
+            )
+
+        for position, item in enumerate(constraints):
+            connection.execute(
+                """
+                INSERT INTO design_items (
+                    project_id,
+                    item_type,
+                    text,
+                    position
+                )
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    project_id,
+                    "constraint",
+                    item,
+                    position
+                )
+            )
     connection.commit()
     connection.close()
