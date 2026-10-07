@@ -78,8 +78,8 @@ def get_all_projects():
     return projects
 
 
-
 def design_project(
+        
     project_id,
     problem,
     architecture,
@@ -90,77 +90,170 @@ def design_project(
 ):
     connection = get_connection()
 
+    # Update the project's single-value design fields
     connection.execute(
         """
-        INSERT INTO project_design (
-            project_id,
-            problem,
-            architecture
-        )
-        VALUES (?, ?, ?)
+        UPDATE projects
+        SET problem = ?,
+            architecture = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
         """,
-        (
-            project_id,
-            problem,
-            architecture
-        )
+        (problem, architecture, project_id)
     )
 
-    for position, item in enumerate(must_have):
-        connection.execute(
-            """
-            INSERT INTO design_items (
-                project_id,
-                item_type,
-                text,
-                position
-            )
-            VALUES (?, ?, ?, ?)
-            """,
-            (
-                project_id,
-                "must_have",
-                item,
-                position
-            )
-        )
+    # Remove the previous list-based design data
+    connection.execute(
+        "DELETE FROM requirements WHERE project_id = ?",
+        (project_id,)
+    )
 
-        for position, item in enumerate(nice_to_have):
+    connection.execute(
+        "DELETE FROM constraints WHERE project_id = ?",
+        (project_id,)
+    )
+
+    connection.execute(
+        "DELETE FROM risks WHERE project_id = ?",
+        (project_id,)
+    )
+
+    # Insert must-have requirements
+    for position, text in enumerate(must_have):
+        if text.strip():
             connection.execute(
                 """
-                INSERT INTO design_items (
+                INSERT INTO requirements (
                     project_id,
-                    item_type,
                     text,
+                    type,
                     position
                 )
                 VALUES (?, ?, ?, ?)
                 """,
                 (
                     project_id,
+                    text.strip(),
+                    "must_have",
+                    position
+                )
+            )
+
+    # Insert nice-to-have requirements
+    for position, text in enumerate(nice_to_have):
+        if text.strip():
+            connection.execute(
+                """
+                INSERT INTO requirements (
+                    project_id,
+                    text,
+                    type,
+                    position
+                )
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    project_id,
+                    text.strip(),
                     "nice_to_have",
-                    item,
                     position
                 )
             )
 
-        for position, item in enumerate(constraints):
+    # Insert constraints
+    for position, text in enumerate(constraints):
+        if text.strip():
             connection.execute(
                 """
-                INSERT INTO design_items (
+                INSERT INTO constraints (
                     project_id,
-                    item_type,
                     text,
                     position
                 )
-                VALUES (?, ?, ?, ?)
+                VALUES (?, ?, ?)
                 """,
-                (
+                (project_id, text.strip(), position)
+            )
+
+    # Insert risks
+    for position, text in enumerate(risks):
+        if text.strip():
+            connection.execute(
+                """
+                INSERT INTO risks (
                     project_id,
-                    "constraint",
-                    item,
+                    text,
                     position
                 )
+                VALUES (?, ?, ?)
+                """,
+                (project_id, text.strip(), position)
             )
+
     connection.commit()
     connection.close()
+
+
+def get_project_design(project_id):
+    '''
+    This retrieves all the desing info for a particular project
+    Projects: Problem, architecture
+    requirements: must-have, and nice-to-have
+    constraints: constraints
+    risks: risks
+    '''
+
+    connection = get_connection()
+
+    must_have = connection.execute(
+        """
+        SELECT *
+        FROM requirements
+        WHERE project_id = ?
+            AND type = ?
+        ORDER BY position , id
+        """,
+        (project_id,"must_have" )
+    ).fetchall()
+
+
+    nice_to_have = connection.execute(
+        """
+        SELECT *
+        FROM requirements
+        WHERE project_id = ?
+            AND type = ?
+        ORDER BY position , id
+        """,
+        (project_id, "nice_to_have")
+    ).fetchall()
+
+    constraints = connection.execute(
+            """
+            SELECT *
+            FROM constraints
+            WHERE project_id = ?
+            ORDER BY position , id
+            """,
+            (project_id, )
+        ).fetchall()
+
+    risks = connection.execute(
+                """
+                SELECT *
+                FROM risks
+                WHERE project_id = ?
+                ORDER BY position , id
+                """,
+                (project_id, )
+            ).fetchall()
+
+    
+    connection.close()
+
+    return {
+        "must_have": must_have,
+        "nice_to_have": nice_to_have,
+        "constraints": constraints,
+        "risks": risks
+    }

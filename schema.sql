@@ -1,7 +1,11 @@
 CREATE TABLE IF NOT EXISTS projects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
-    what_building TEXT,
+    what TEXT,
+    why TEXT,
+    success TEXT,
+
+
     status TEXT NOT NULL DEFAULT 'Not Started',
     current_stage TEXT NOT NULL DEFAULT 'Overview',
     problem TEXT,

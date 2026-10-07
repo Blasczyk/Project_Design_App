@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for
 from database import init_db , create_project as db_create_project
-from database import get_project , get_all_projects
+from database import get_project , get_all_projects , design_project , get_project_design
 
 app = Flask(__name__)
 
@@ -83,6 +83,8 @@ def design(project_id):
             risks
         )
 
+   
+
         return redirect(
             url_for(
                 "project_dashboard",
@@ -90,9 +92,12 @@ def design(project_id):
             )
         )
 
+     #GET: retrieve existing design data
+    design_data = get_project_design(project_id)
     return render_template(
         "design.html",
-        project=project
+        project=project,
+        design_data = design_data
     )
 
 
