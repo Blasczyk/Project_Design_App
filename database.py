@@ -1,4 +1,8 @@
 import sqlite3
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+SCHEMA_PATH = BASE_DIR / "schema.sql"
 
 DATABASE = "instance/project_design.db"
 
@@ -6,6 +10,7 @@ def get_connection():
 
     connection = sqlite3.connect(DATABASE)
     connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
 
     return connection
 
@@ -13,49 +18,8 @@ def get_connection():
 def init_db():
     connection = get_connection()
 
-    connection.execute("""
-        CREATE TABLE IF NOT EXISTS projects (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            what TEXT,
-            why TEXT,
-            success TEXT,
-            status TEXT NOT NULL DEFAULT 'Not Started',
-            current_stage TEXT NOT NULL DEFAULT 'Overview',
-            progress INTEGER NOT NULL DEFAULT 0,
-            next_action TEXT,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    connection.execute("""
-        CREATE TABLE IF NOT EXISTS project_design (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id INTEGER NOT NULL UNIQUE,
-            problem TEXT,
-            architecture TEXT,
-
-            FOREIGN KEY (project_id)
-                REFERENCES projects(id)
-                ON DELETE CASCADE
-        )
-    """)
-
-    connection.execute("""
-        CREATE TABLE IF NOT EXISTS design_items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id INTEGER NOT NULL,
-            item_type TEXT NOT NULL,
-            text TEXT NOT NULL,
-            completed INTEGER NOT NULL DEFAULT 0,
-            position INTEGER NOT NULL DEFAULT 0,
-
-            FOREIGN KEY (project_id)
-                REFERENCES projects(id)
-                ON DELETE CASCADE
-        )
-    """)
+    with open(SCHEMA_PATH, "r")as schema_file:
+        connection.executescript(schema_file.read())
 
     connection.commit()
     connection.close()
