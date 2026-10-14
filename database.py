@@ -18,11 +18,14 @@ def get_connection():
 def init_db():
     connection = get_connection()
 
-    with open(SCHEMA_PATH, "r")as schema_file:
-        connection.executescript(schema_file.read())
+    try:
+        with open(SCHEMA_PATH, "r") as schema_file:
+            connection.executescript(schema_file.read())
 
-    connection.commit()
-    connection.close()
+        connection.commit()
+
+    finally:
+        connection.close()
 
 def create_project(title, what, why, success):
     connection = get_connection()
@@ -78,11 +81,14 @@ def get_all_projects():
     return projects
 
 
+
 def design_project(
-        
     project_id,
     problem,
-    architecture,
+    architecture_overview,
+    architecture_components,
+    architecture_flow,
+    architecture_technology,
     must_have,
     nice_to_have,
     constraints,
@@ -90,108 +96,160 @@ def design_project(
 ):
     connection = get_connection()
 
-    # Update the project's single-value design fields
-    connection.execute(
-        """
-        UPDATE projects
-        SET problem = ?,
-            architecture = ?,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-        """,
-        (problem, architecture, project_id)
-    )
+    try:
+        connection.execute("BEGIN")
 
-    # Remove the previous list-based design data
-    connection.execute(
-        "DELETE FROM requirements WHERE project_id = ?",
-        (project_id,)
-    )
+        # 1. Update single-value design fields
+        cursor = connection.execute(
+            """
+            UPDATE projects
+            SET problem = ?,
+                architecture = ?,
+                architecture_flow = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (
+                problem,
+                architecture_overview,
+                architecture_flow,
+                project_id
+            )
+        )
 
-    connection.execute(
-        "DELETE FROM constraints WHERE project_id = ?",
-        (project_id,)
-    )
+        if cursor.rowcount != 1:
+            raise ValueError("Project not found")
 
-    connection.execute(
-        "DELETE FROM risks WHERE project_id = ?",
-        (project_id,)
-    )
+        # 2. Remove previous repeatable design entries
+        for table in (
+            "requirements",
+            "constraints",
+            "risks",
+            "architecture_components",
+            "architecture_technology"
+        ):
+            connection.execute(
+                f"DELETE FROM {table} WHERE project_id = ?",
+                (project_id,)
+            )
 
-    # Insert must-have requirements
-    for position, text in enumerate(must_have):
-        if text.strip():
+        # 3. Save requirements
+        for item_type, items in (
+            ("must_have", must_have),
+            ("nice_to_have", nice_to_have)
+        ):
+            for position, text in enumerate(items):
+                text = text.strip()
+
+                if text:
+                    connection.execute(
+                        """
+                        INSERT INTO requirements (
+                            project_id,
+                            text,
+                            type,
+                            position
+                        )
+                        VALUES (?, ?, ?, ?)
+                        """,
+                        (
+                            project_id,
+                            text,
+                            item_type,
+                            position
+                        )
+                    )
+
+        # 4. Save constraints
+        for position, text in enumerate(constraints):
+            text = text.strip()
+
+            if text:
+                connection.execute(
+                    """
+                    INSERT INTO constraints (
+                        project_id,
+                        text,
+                        position
+                    )
+                    VALUES (?, ?, ?)
+                    """,
+                    (project_id, text, position)
+                )
+
+        # 5. Save architecture components
+        for position, text in enumerate(architecture_components):
+            text = text.strip()
+
+            if text:
+                connection.execute(
+                    """
+                    INSERT INTO architecture_components (
+                        project_id,
+                        text,
+                        position
+                    )
+                    VALUES (?, ?, ?)
+                    """,
+                    (project_id, text, position)
+                )
+
+        # 6. Save technology decisions
+        for position, decision in enumerate(architecture_technology):
+            name = decision.get("name", "").strip()
+
+            if not name:
+                continue
+
             connection.execute(
                 """
-                INSERT INTO requirements (
+                INSERT INTO architecture_technology (
                     project_id,
-                    text,
-                    type,
+                    name,
+                    reason,
+                    alternative,
+                    tradeoff,
                     position
                 )
-                VALUES (?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
                 (
                     project_id,
-                    text.strip(),
-                    "must_have",
+                    name,
+                    decision.get("reason", "").strip(),
+                    decision.get("alternative", "").strip(),
+                    decision.get("tradeoff", "").strip(),
                     position
                 )
             )
 
-    # Insert nice-to-have requirements
-    for position, text in enumerate(nice_to_have):
-        if text.strip():
-            connection.execute(
-                """
-                INSERT INTO requirements (
-                    project_id,
-                    text,
-                    type,
-                    position
-                )
-                VALUES (?, ?, ?, ?)
-                """,
-                (
-                    project_id,
-                    text.strip(),
-                    "nice_to_have",
-                    position
-                )
-            )
+        # 7. Save risks
+        for position, text in enumerate(risks):
+            text = text.strip()
 
-    # Insert constraints
-    for position, text in enumerate(constraints):
-        if text.strip():
-            connection.execute(
-                """
-                INSERT INTO constraints (
-                    project_id,
-                    text,
-                    position
+            if text:
+                connection.execute(
+                    """
+                    INSERT INTO risks (
+                        project_id,
+                        text,
+                        position
+                    )
+                    VALUES (?, ?, ?)
+                    """,
+                    (project_id, text, position)
                 )
-                VALUES (?, ?, ?)
-                """,
-                (project_id, text.strip(), position)
-            )
 
-    # Insert risks
-    for position, text in enumerate(risks):
-        if text.strip():
-            connection.execute(
-                """
-                INSERT INTO risks (
-                    project_id,
-                    text,
-                    position
-                )
-                VALUES (?, ?, ?)
-                """,
-                (project_id, text.strip(), position)
-            )
+        # 8. Commit all changes
+        connection.commit()
 
-    connection.commit()
-    connection.close()
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
 
 
 def get_project_design(project_id):

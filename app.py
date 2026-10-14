@@ -9,7 +9,7 @@ init_db()
 
 
 @app.route("/")
-def project_Repo():
+def project_repo():
 
     projects = get_all_projects()
     return render_template("projects.html", projects=projects)
@@ -71,13 +71,20 @@ def design(project_id):
         must_have = request.form.getlist("must_have")
         nice_to_have = request.form.getlist("nice_have")
         constraints = request.form.getlist("constraints")
-        architecture = request.form.get("architecture")
+        # 
+        architecture_overview = request.form.get("architecture")
+        architecture_components = request.form.getlist("component-list")
+        architecture_flow = request.form.get("data-flow")
+        architecture_technology = request.form.getlist("technology-list")
         risks = request.form.getlist("risks")
 
         design_project(
             project_id,
             problem,
-            architecture,
+            architecture_overview,
+            architecture_components,
+            architecture_flow,
+            architecture_technology,
             must_have,
             nice_to_have,
             constraints,
@@ -160,8 +167,8 @@ def edit_project(project_id):
 
 @app.route("/projects/<int:project_id>/delete", methods=["POST"])
 def delete_project_route(project_id):
-
     deleted = delete_project(project_id)
+
     if deleted == 0:
         abort(404)
 

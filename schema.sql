@@ -5,11 +5,13 @@ CREATE TABLE IF NOT EXISTS projects (
     why TEXT,
     success TEXT,
 
-
     status TEXT NOT NULL DEFAULT 'Not Started',
     current_stage TEXT NOT NULL DEFAULT 'Overview',
+
     problem TEXT,
     architecture TEXT,
+    architecture_flow TEXT,
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -43,6 +45,42 @@ CREATE TABLE IF NOT EXISTS risks (
     project_id INTEGER NOT NULL,
     text TEXT NOT NULL,
     position INTEGER NOT NULL DEFAULT 0,
+
+    FOREIGN KEY (project_id)
+        REFERENCES projects(id)
+        ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS architecture_technology (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    reason TEXT,
+    alternative TEXT,
+    tradeoff TEXT,
+    position INTEGER NOT NULL DEFAULT 0,
+
+    FOREIGN KEY (project_id)
+        REFERENCES projects(id)
+        ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS architecture_components (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    position INTEGER NOT NULL DEFAULT 0,
+
+    FOREIGN KEY (project_id)
+        REFERENCES projects(id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS architecture_diagrams (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    original_filename TEXT NOT NULL,
+    stored_filename TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    uploaded_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (project_id)
         REFERENCES projects(id)

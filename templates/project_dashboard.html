@@ -32,7 +32,7 @@
         <!-- Create a outline of what is done here, everything should be static
           on this page. We should Just see the basic outline of completed part. 
           Maybe a percent completion as well in the header.-->
-        <section> 
+        <section id="project_overview"> 
             <h2>Project Overview</h2>
             <h3>What I am building</h3>
                 <h4>{{project.what}}</h4>
@@ -42,12 +42,23 @@
                 <h4>{{project.success}}</h4>
                 
             <a href="{{ url_for('edit_project', project_id=project['id']) }}">
-                Edit Project
+                Edit Project Overview
             </a>
             </section>
 
-          <section> 
+          <section id="project_design"> 
             <h2> Project Design</h2>
+                <h3>Goal</h3>
+                    <h4>{{project.problem}}</h4>
+
+                <h3>Requirements</h3>
+                    <h4>Project must Haves {{project.must_have}}</h4>
+                    <br>
+                    <h4>Project nice to Haves {{project.nice_have}}</h4>
+                <h3>Constraints</h3>
+                    <h4>{{project.constraints}}</h4>
+                <h3>Architecture</h3>
+                <h3>Risks and Unkowns</h3>
 
           </section>
 

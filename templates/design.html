@@ -10,139 +10,39 @@
                     <a href="{{ url_for('project_dashboard', project_id=project['id']) }}">
                         Project Dashboard
                     </a>
-                    <li><a href="#"> Goal</a></li>
-                    <li><a href="#"> Requirements</a></li>
-                    <li><a href="#"> Architecture</a></li>
-                    <li><a href="#"> Risks / Unkowns</a></li>
+                    <li><a href="#problem"> Goal</a></li>
+                    <li><a href="#requirements"> Requirements</a></li>
+                    <li><a href="#constraints"> Constraints</a></li>
+                    <li><a href="#architecture"> Architecture</a></li>
+                    <li><a href="#risks"> Risks / Unkowns</a></li>
                 </ul>
             </nav>
         </header>
 
         <form action="{{ url_for('design', project_id=project['id']) }}" method="post">
-            <h2>Problem</h2>
-            <label for="problem">What problem does this project solve? or who
-                is this system for? </label><br>
-            <textarea id="problem" name="problem" required>{{ project['problem'] or ''}}</textarea>
-            <br><br>
-
-            <h2>Requirements</h2>
-            <br>
-            <h3>Must Have</h3>
-
-            <div id="must-have-list">
-                {% for item in design_data.must_have %}
-                    <div class="bullet-item">
-                        <span>•</span>
-
-                        <input
-                            type="text"
-                            name="must_have"
-                            value="{{ item['text'] }}"
-                        >
-
-                        <button
-                            type="button"
-                            onclick="this.closest('.bullet-item').remove()"
-                        >
-                            Remove
-                        </button>
-                    </div>
-                {% endfor %}
-            </div>
-
-            <button
-                type="button"
-                onclick="addBullet('must-have-list', 'must_have')"
-            >
-                + Add Requirement
-            </button>
-
-            <br>
-            <h3>Nice To Have</h3>
-            <div id="nice-have-list">
-                {% for item in design_data.nice_to_have %}
-                    <div class="bullet-item">
-                        <input
-                            type="text"
-                            name="nice_have"
-                            value="{{ item['text'] }}"
-                            placeholder="Enter requirement"
-                        >
-
-                        <button
-                            type="button"
-                            onclick="this.closest('.bullet-item').remove()"
-                        >
-                            Remove
-                        </button>
-                    </div>
-                {% endfor %}
-            </div>
-            <button
-                type="button"
-                onclick="addBullet('nice-have-list','nice_have')">
-                + Add Requirement
-            </button>
             
-
-            <br>
-            <h3>Constraints</h3>
-            <div id="constraint-list">
-                <div id="constraint-list">
-                    {% for item in design_data.constraints %}
+            <section id="problem">
+                <h2>Problem</h2>
+                <label for="problem">What problem does this project solve? or who
+                    is this system for? </label><br>
+                <textarea id="problem" name="problem" required>{{ project['problem'] or ''}}</textarea>
+                <br><br>
+            </section>
+            
+            <section id="requirements">
+                <h2>Requirements</h2>
+                <h3>Must Have</h3>
+                <div id="must-have-list">
+                    {% for item in design_data.must_have %}
                         <div class="bullet-item">
+                            <span>•</span>
+
                             <input
                                 type="text"
-                                name="constraints"
+                                name="must_have"
                                 value="{{ item['text'] }}"
-                                placeholder="Enter requirement"
                             >
 
-                        <button
-                            type="button"
-                            onclick="this.closest('.bullet-item').remove()"
-                        >
-                            Remove
-                        </button>
-                                </div>
-                    {% endfor %}
-                </div>
-                
-            </div>
-            <button 
-                type="button"
-                onclick="addBullet('constraint-list','constraints')">
-            + Add Requirement
-            </button>
-            
-                
-
-            <br><br>
-            <h2>Architecture</h2>
-            <br>
-            <h3>Description of the componnets and how they interact</h3>
-            <br>
-            <label for="architecture">Description of the componnets and how they interact</label>
-            <br>
-            <textarea id="architecture" name="architecture" required>{{ project['architecture'] or ''}}</textarea>
-            <br>
-            <h3>Technology choices</h3>
-            
-
-            <br><br>
-            <h2>Risks / Unknowns</h2>
-            <br>
-            <label for="risks">What do I currently not know how to do?(These should be learning targets)</label>
-            <div id="risk-list">
-                <div id="risk-list">
-                    {% for item in design_data.risks %}
-                        <div class="bullet-item">
-                            <input
-                                type="text"
-                                name="risks"
-                                value="{{ item['text'] }}"
-                                placeholder="Enter requirement"
-                            >
                             <button
                                 type="button"
                                 onclick="this.closest('.bullet-item').remove()"
@@ -152,15 +52,186 @@
                         </div>
                     {% endfor %}
                 </div>
-            </div>
-            <button
-                type="button"
-                onclick="addBullet('risk-list','risks')">
-            + Add Risk
-            </button>
+
+                <button
+                    type="button"
+                    onclick="addBullet('must-have-list', 'must_have')"
+                >
+                    + Add Requirement
+                </button>
+
+                <br>
+                <h3>Nice To Have</h3>
+                <div id="nice-have-list">
+                    {% for item in design_data.nice_to_have %}
+                        <div class="bullet-item">
+                            <input
+                                type="text"
+                                name="nice_have"
+                                value="{{ item['text'] }}"
+                                placeholder="Enter requirement"
+                            >
+
+                            <button
+                                type="button"
+                                onclick="this.closest('.bullet-item').remove()"
+                            >
+                                Remove
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+                <button
+                    type="button"
+                    onclick="addBullet('nice-have-list','nice_have')">
+                    + Add Requirement
+                </button>
+            </section>
+            
+            
+            <section id="constraints">
+                <h3>Constraints</h3>
+                <div id="constraint-list">
+                    {% for item in design_data.constraints %}
+                        <div class="bullet-item">
+                            <input
+                                type="text"
+                                name="constraints"
+                                value="{{ item['text'] }}"
+                                placeholder="Enter requirement"
+                            >
+                        <button
+                            type="button"
+                            onclick="this.closest('.bullet-item').remove()"
+                        >
+                            Remove
+                        </button>
+                                </div>
+                    {% endfor %}
+                </div>
+                <button 
+                    type="button"
+                    onclick="addBullet('constraint-list','constraints')">
+                + Add Requirement
+                </button>
+
+            </section>
+  
+            <br><br>
+
+            <section id="architecture">
+                <h2>Project Architecture</h2>
+                <!-- 1. System Overview -->
+                <div class="architecture-section">
+                    <h3>1. System Overview</h3>
+                    <label for="architecture_system_overview">Description of the componnets and how they interact</label>
+                    <br>
+                    <textarea 
+                        id="architecture_system_overview"
+                        name="architecture_system_overview" 
+                        rows= "5"
+                        required>
+                        {{ project['architecture'] or ''}}</textarea>
+                </div>
+               <!-- System Components -->
+                <div class="architecture-section">
+                    <h3>2.  System Components</h3>
+                    <p> 
+                        Identify the major components and their responsibilities.
+                    </p>
+
+                    <div id="component-list">
+                        <!-- List goes here -->
+                    </div>
+                    <button
+                        type="button"
+                        onclick="addComponent()"
+                        >
+                    + add Component</button>
+                </div>
+
+                <!-- Data Flow and Interactions -->
+                <div class="architecture-section">
+                    <h3>3. Data Flow & Interactions</h3>
+                    <label for="data-flow">
+                        How does information move through the system?
+                    </label>
+
+                    <textarea
+                        id="data-flow"
+                        name="data_flow"
+                        rows="5"
+                    ></textarea>
+                </div>
+                
+                <!-- Technology Decsisions -->
+                <div class="architecture-section">
+                    <h3>4. Technology Decisions</h3>
+                    <div id="technology-list">
+                        <!-- List should have Reason, Alternative, Trade off -->
+                    </div>
+                    <button 
+                        type="button"
+                        onclick="addTechnology()"
+                    >
+                    + add technology decision
+                </button>
+                </div>
+               
+                <!-- Architecture Diagram -->
+                <div class="architecture-section">
+                    <h3>5. Architecture Diagram</h3>
+                    <label for="architecture-diagram">
+                        Upload a system architecture diagram.
+                    </label>
+                    
+                    <input
+                        type="file"
+                        id="architecture-diagram"
+                        name="architecture-diagram"
+                        accept=".png,.jpg,.jpeg,.svg,.pdf"
+                        >
+                </div>
+                
+
+            </section>
+                
+
+            <br><br>
+            <section id="risks">
+                <h2>Risks / Unknowns</h2>
+                <br>
+                <label for="risks">What do I currently not know how to do?(These should be learning targets)</label>
+                    <div id="risk-list">
+                        {% for item in design_data.risks %}
+                            <div class="bullet-item">
+                                <input
+                                    type="text"
+                                    name="risks"
+                                    value="{{ item['text'] }}"
+                                    placeholder="Enter requirement"
+                                >
+                                <button
+                                    type="button"
+                                    onclick="this.closest('.bullet-item').remove()"
+                                >
+                                    Remove
+                                </button>   
+                            </div>
+                        {% endfor %}
+                    </div>
+                <button
+                    type="button"
+                    onclick="addBullet('risk-list','risks')">
+                + Add Risk
+                </button>
+            </section>
+                
+            
+            
             
             <br><br>
-            <button type="submit"> Submit</button>
+            <button type="submit"> Save Design</button>
 
         </form>
     <script src="{{ url_for('static', filename='js/design.js') }}"></script>
