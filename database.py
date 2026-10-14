@@ -257,3 +257,34 @@ def get_project_design(project_id):
         "constraints": constraints,
         "risks": risks
     }
+
+def update_project(title, what, why, success, project_id):
+    connection = get_connection()
+    connection.execute(
+        """
+        UPDATE projects
+        SET title = ?,
+            what = ?,
+            why = ?,
+            success =?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+        """,
+        (title, what, why, success, project_id)
+    )
+    connection.commit()
+    connection.close()
+
+def delete_project(project_id):
+    connection = get_connection()
+    connection.execute(
+        """
+        DELETE FROM projects
+        WHERE id = ?
+        """,
+        (project_id)
+    )
+    connection.commit()
+    connection.close()
+    
+

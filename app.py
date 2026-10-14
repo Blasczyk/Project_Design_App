@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for
 from database import init_db , create_project as db_create_project
 from database import get_project , get_all_projects , design_project , get_project_design
+from database import delete_project, update_project
 
 app = Flask(__name__)
 
@@ -132,6 +133,34 @@ def testing(project_id):
     if request.method == "POST":
         print("helloworld")
     return render_template("testing.html",project = project)
+
+
+@app.route(
+    "/projects/<int:project_id>/edit", methods = ["GET","POST"])
+def edit_project(project_id):
+
+    project = get_project(project_id)
+
+    if project is None:
+        return "Project not found", 404
+
+    if request.method == "POST":
+        title = request.form.get("title")
+        what = request.form.get("what")
+        why = request.form.get("why")
+        success = request.form.get("success")
+
+        update_project(
+            project_id, title, what, why, success
+        )
+
+        return redirect(
+            url_for("project_dashboard", project_id=project_id)
+        )
+
+    return render_template("edit_project.html", project=project)
+
+
 
 
 # @app.route("/learning")
