@@ -50,6 +50,20 @@
             <h2> Project Design</h2>
 
           </section>
+
+          <section class="delete-project">
+            <h2>Project Management</h2>
+            <form
+                action="{{ url_for('delete_project_route', project_id=project['id']) }}"
+                method="POST"
+                onsubmit="return confirm('Permanently delete this project?');"
+            >
+                <button type="submit">
+                    Delete Project
+                </button>
+            </form>
+
+        </section>      
     </main>
 </body>
 </html> 

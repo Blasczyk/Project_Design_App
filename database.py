@@ -258,7 +258,7 @@ def get_project_design(project_id):
         "risks": risks
     }
 
-def update_project(title, what, why, success, project_id):
+def update_project(project_id, title, what, why, success):
     connection = get_connection()
     connection.execute(
         """
@@ -277,14 +277,18 @@ def update_project(title, what, why, success, project_id):
 
 def delete_project(project_id):
     connection = get_connection()
-    connection.execute(
+    cursor = connection.execute(
         """
         DELETE FROM projects
         WHERE id = ?
         """,
-        (project_id)
+        (project_id,)
     )
     connection.commit()
+    deleted = cursor.rowcount
     connection.close()
+    return deleted
+
+
     
 

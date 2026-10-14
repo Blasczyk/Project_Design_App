@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, abort
 from database import init_db , create_project as db_create_project
 from database import get_project , get_all_projects , design_project , get_project_design
 from database import delete_project, update_project
@@ -9,7 +9,7 @@ init_db()
 
 
 @app.route("/")
-def Project_Repo():
+def project_Repo():
 
     projects = get_all_projects()
     return render_template("projects.html", projects=projects)
@@ -105,10 +105,8 @@ def design(project_id):
 @app.route("/projects/<int:project_id>/build", methods =["GET","POST"])
 def build(project_id):
 
-    project = next(
-            (project for project in projects if project["id"] == project_id),
-            None
-        )
+    project = get_project(project_id)
+    
     
     if project is None:
         return "Project not found", 404
@@ -122,10 +120,7 @@ def build(project_id):
 @app.route("/projects/<int:project_id>/testing" , methods = ["GET","POST"])
 def testing(project_id):
 
-    project = next(
-        (project for project in projects if project["id"] == project_id),
-         None
-    )
+    project = get_project(project_id)
 
     if project is None:
         return "Project not Found.", 404
@@ -153,6 +148,8 @@ def edit_project(project_id):
         update_project(
             project_id, title, what, why, success
         )
+        # updated_project = get_project(project_id)
+        # print("DATABASE AFTER UPDATE:", dict(updated_project))
 
         return redirect(
             url_for("project_dashboard", project_id=project_id)
@@ -160,6 +157,15 @@ def edit_project(project_id):
 
     return render_template("edit_project.html", project=project)
 
+
+@app.route("/projects/<int:project_id>/delete", methods=["POST"])
+def delete_project_route(project_id):
+
+    deleted = delete_project(project_id)
+    if deleted == 0:
+        abort(404)
+
+    return redirect(url_for("project_repo"))
 
 
 

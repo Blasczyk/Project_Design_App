@@ -24,9 +24,19 @@
         <ul>
             {% for project in projects %}
                 <li>
+                    <!-- Project link -->
                     <a href="{{ url_for('project_dashboard', project_id=project.id) }}">
                         {{ project.title }}
                     </a>
+
+                    <!-- Delete project -->
+                    <form
+                        action="{{ url_for('delete_project_route', project_id=project.id) }}"
+                        method="POST"
+                        onsubmit="return confirm('Are you sure you want to delete this project?');"
+                    >
+                        <button type="submit">Delete</button>
+                    </form>
                 </li>
             {% endfor %}
         </ul>

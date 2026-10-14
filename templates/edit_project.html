@@ -4,7 +4,7 @@
     action="{{ url_for('edit_project', project_id=project['id']) }}"
     method="POST"
 >
-    <label for="title">Project Title</label>
+    <label for="title">Project Title:</label>
     <input
         id="title"
         type="text"
@@ -15,13 +15,15 @@
     <br><br>
 
     <label for="what">What are you building?</label>
+    <br>
     <textarea id="what" name="what">{{ project['what'] or '' }}</textarea>
     <br><br>
 
     <label for="why">Why are you building it?</label>
+    <br>
     <textarea id="why" name="why">{{ project['why'] or '' }}</textarea>
     <br><br>
-    <label for="success">What defines success?</label>
+    <label for="success">What defines success?</label><br>
     <textarea id="success" name="success">{{ project['success'] or '' }}</textarea>
     <br><br>
     <button type="submit">Save Changes</button>
