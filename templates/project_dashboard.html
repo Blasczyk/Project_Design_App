@@ -8,9 +8,9 @@
             <div id="Menu">
                 <ol>
                     <li class="active"><a href="#"> Project Dashboard</a></li>
-                    <a href="{{ url_for('design', project_id=project.id) }}">
+                    <li><a href="{{ url_for('design', project_id=project.id) }}">
                         Design
-                    </a>
+                    </a></li>
                     <li><a href="{{ url_for('build', project_id=project['id']) }}"> 
                         Build Plan</a></li>
                     <li><a href="#"> Build Log</a></li>
@@ -29,6 +29,14 @@
     </header>
 
     <main>
+        <!-- Project Header -->
+         <ul>
+            <li>Status:</li>
+            <li>Progress:</li>
+            <li>Current Stage:</li>
+            <li>Last updated:</li>
+            <li>Next Action:</li>
+         </ul>
         <!-- Create a outline of what is done here, everything should be static
           on this page. We should Just see the basic outline of completed part. 
           Maybe a percent completion as well in the header.-->
@@ -44,25 +52,89 @@
             <a href="{{ url_for('edit_project', project_id=project['id']) }}">
                 Edit Project Overview
             </a>
-            </section>
+        </section>
 
-          <section id="project_design"> 
-            <h2> Project Design</h2>
-                <h3>Goal</h3>
-                    <h4>{{project.problem}}</h4>
+        <!------------ Project design section --------------->  
+        <section id="project_design">
+            <h2>Project Design</h2>
 
-                <h3>Requirements</h3>
-                    <h4>Project must Haves {{project.must_have}}</h4>
-                    <br>
-                    <h4>Project nice to Haves {{project.nice_have}}</h4>
-                <h3>Constraints</h3>
-                    <h4>{{project.constraints}}</h4>
-                <h3>Architecture</h3>
-                <h3>Risks and Unkowns</h3>
+            <!-- Goal -->
+            <h3>Goal</h3>
+            <p>{{ project['problem'] or 'Not defined' }}</p>
 
-          </section>
+            <!-- Requirements -->
+            <h3>Requirements</h3>
 
-          <section class="delete-project">
+            <h4>Must Have</h4>
+            <ul>
+                {% for item in design_data.must_have %}
+                    <li>{{ item['text'] }}</li>
+                {% else %}
+                    <li>No requirements defined.</li>
+                {% endfor %}
+            </ul>
+
+            <h4>Nice to Have</h4>
+            <ul>
+                {% for item in design_data.nice_to_have %}
+                    <li>{{ item['text'] }}</li>
+                {% else %}
+                    <li>No requirements defined.</li>
+                {% endfor %}
+            </ul>
+
+            <!-- Constraints -->
+            <h3>Constraints</h3>
+            <ul>
+                {% for item in design_data.constraints %}
+                    <li>{{ item['text'] }}</li>
+                {% else %}
+                    <li>No constraints defined.</li>
+                {% endfor %}
+            </ul>
+
+            <!-- Architecture -->
+            <h3>Architecture</h3>
+            <p>{{ project['architecture'] or 'Not defined' }}</p>
+
+            <h4>System Components</h4>
+            <ul>
+                {% for item in design_data.components %}
+                    <li>{{ item['text'] }}</li>
+                {% else %}
+                    <li>No components defined.</li>
+                {% endfor %}
+            </ul>
+
+            <h4>Technology Decisions</h4>
+            {% for technology in technologies %}
+                <div class="technology-item">
+                    <h5>{{ technology['name'] }}</h5>
+                    <p><strong>Reason:</strong> {{ technology['reason'] }}</p>
+                    <p><strong>Alternative:</strong> {{ technology['alternative'] }}</p>
+                    <p><strong>Tradeoff:</strong> {{ technology['tradeoff'] }}</p>
+                </div>
+            {% else %}
+                <p>No technology decisions recorded.</p>
+            {% endfor %}
+
+            <!-- Risks -->
+            <h3>Risks and Unknowns</h3>
+            <ul>
+                {% for item in design_data.risks %}
+                    <li>{{ item['text'] }}</li>
+                {% else %}
+                    <li>No risks recorded.</li>
+                {% endfor %}
+            </ul>
+        </section>
+        <!-- Current Log -->
+        <section class="recent-log">
+            <h2>Recent Work</h2>
+            <h3>comming soon</h3>
+        </section>
+        <!--Delete Project button  -->
+        <section class="delete-project">
             <h2>Project Management</h2>
             <form
                 action="{{ url_for('delete_project_route', project_id=project['id']) }}"

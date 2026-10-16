@@ -54,49 +54,42 @@ function addComponent(){
     list.appendChild(item);
 }
 
-
-function addDecision() {
-    const list = document.getElementById("decision-list");
+function addTechnology(){
+    const list = document.getElementById("technology-list");
 
     const item = document.createElement("div");
-    item.className = "architecture-item";
+    item.className = "technology-item";
 
     item.innerHTML = `
-        <label>Technology / Decision</label>
         <input
             type="text"
-            name="decision_name"
-            placeholder="e.g. SQLite"
+            name="technology_name"
+            placeholder="Technology name"
+            required
         >
 
-        <label>Reason</label>
         <textarea
-            name="decision_reason"
-            placeholder="Why was this selected?"
+            name="technology_reason"
+            placeholder="Reason for choosing"
         ></textarea>
 
-        <label>Alternative Considered</label>
-        <input
-            type="text"
-            name="decision_alternative"
-            placeholder="e.g. PostgreSQL"
-        >
-
-        <label>Trade-off</label>
         <textarea
-            name="decision_tradeoff"
-            placeholder="What limitations does this introduce?"
+            name="technology_alternative"
+            placeholder="Alternatives considered"
         ></textarea>
 
-        <button type="button" class="remove-item">
+        <textarea
+            name="technology_tradeoff"
+            placeholder="Tradeoffs"
+        ></textarea>
+
+        <button type="button" class="remove-technology">
             Remove
         </button>
     `;
 
-    item.querySelector(".remove-item").addEventListener(
-        "click",
-        () => item.remove()
-    );
+    item.querySelector(".remove-technology")
+        .addEventListener("click", () => item.remove());
 
     list.appendChild(item);
 }

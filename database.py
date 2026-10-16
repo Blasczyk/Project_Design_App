@@ -80,15 +80,13 @@ def get_all_projects():
     connection.close()
     return projects
 
-
-
 def design_project(
     project_id,
     problem,
     architecture_overview,
     architecture_components,
     architecture_flow,
-    architecture_technology,
+    technologies,
     must_have,
     nice_to_have,
     constraints,
@@ -126,7 +124,6 @@ def design_project(
             "constraints",
             "risks",
             "architecture_components",
-            "architecture_technology"
         ):
             connection.execute(
                 f"DELETE FROM {table} WHERE project_id = ?",
@@ -194,16 +191,13 @@ def design_project(
                     (project_id, text, position)
                 )
 
+        
         # 6. Save technology decisions
-        for position, decision in enumerate(architecture_technology):
-            name = decision.get("name", "").strip()
-
-            if not name:
-                continue
-
+        for position, technology in enumerate(technologies):
             connection.execute(
                 """
-                INSERT INTO architecture_technology (
+                INSERT INTO architecture_technology
+                (
                     project_id,
                     name,
                     reason,
@@ -215,10 +209,10 @@ def design_project(
                 """,
                 (
                     project_id,
-                    name,
-                    decision.get("reason", "").strip(),
-                    decision.get("alternative", "").strip(),
-                    decision.get("tradeoff", "").strip(),
+                    technology["name"],
+                    technology["reason"],
+                    technology["alternative"],
+                    technology["tradeoff"],
                     position
                 )
             )
@@ -249,8 +243,6 @@ def design_project(
 
     finally:
         connection.close()
-
-
 
 def get_project_design(project_id):
     '''
@@ -315,6 +307,26 @@ def get_project_design(project_id):
         "constraints": constraints,
         "risks": risks
     }
+
+def get_technologies(project_id):
+    conn = get_connection()
+
+    try:
+        technologies = conn.execute(
+            """
+            SELECT *
+            FROM architecture_technology
+            WHERE project_id = ?
+            ORDER BY position ASC
+            """,
+            (project_id,)
+        ).fetchall()
+
+        return technologies
+
+    finally:
+        conn.close()
+
 
 def update_project(project_id, title, what, why, success):
     connection = get_connection()

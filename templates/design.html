@@ -142,6 +142,11 @@
 
                     <div id="component-list">
                         <!-- List goes here -->
+                         <input
+                                    type="text"
+                                    name="component"
+                                    placeholder="Enter requirement"
+                                >
                     </div>
                     <button
                         type="button"
@@ -167,17 +172,45 @@
                 <!-- Technology Decsisions -->
                 <div class="architecture-section">
                     <h3>4. Technology Decisions</h3>
+
+
                     <div id="technology-list">
-                        <!-- List should have Reason, Alternative, Trade off -->
-                    </div>
+                        {% for item in technologies %}
+                        <div class="technology-item">
+                        
+                            <!-- List should have Reason, Alternative, Trade off -->
+                            <input
+                                        type="text"
+                                        name="technology_name"
+                                        value="{{ item['text'] }}"
+                                        placeholder="Technology name"
+                                        required
+                            >
+                            <textarea
+                                name="technology_reason"
+                                placeholder="Reason for chosing"
+                            >{{ item['reason'] or ''}}</textarea>
+                            
+                            <textarea
+                                name="tecnology_alternative"
+                                placeholder="Alternatives considered"
+                            > {{ item[ 'alternative'] or ''}}</textarea>
+
+                            <textarea
+                                name="technology_tradeoff"
+                                placeholder="The tradeoffs"
+                            >{{item['tradeoff'] or ''}}</textarea>
+                        </div>
+                        {% endfor %}
+                     </div>
                     <button 
                         type="button"
                         onclick="addTechnology()"
                     >
-                    + add technology decision
-                </button>
+                        Add Technology
+                    </button>
                 </div>
-               
+                    
                 <!-- Architecture Diagram -->
                 <div class="architecture-section">
                     <h3>5. Architecture Diagram</h3>

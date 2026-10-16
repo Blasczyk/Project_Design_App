@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, abort
 from database import init_db , create_project as db_create_project
 from database import get_project , get_all_projects , design_project , get_project_design
-from database import delete_project, update_project
+from database import delete_project, update_project, get_technologies
 
 app = Flask(__name__)
 
@@ -48,10 +48,15 @@ def project_dashboard(project_id):
     project = get_project(project_id)
 
     if project is None:
-        return "Project n0t found", 404
+        return "Project not found", 404
+
+    design_data = get_project_design(project_id)
+    technologies = get_technologies(project_id)
     
     return render_template("project_dashboard.html",
-                            project = project)
+                            project = project,
+                            design_data = design_data,
+                            technologies = technologies)
 
 
 @app.route(
@@ -75,8 +80,30 @@ def design(project_id):
         architecture_overview = request.form.get("architecture")
         architecture_components = request.form.getlist("component-list")
         architecture_flow = request.form.get("data-flow")
-        architecture_technology = request.form.getlist("technology-list")
         risks = request.form.getlist("risks")
+       
+        # Architecutural Technologies
+        technology_names = request.form.getlist("technology_name")
+        technology_reasons = request.form.getlist("technology_reason")
+        technology_alternatives = request.form.getlist("technology_alternative")
+        technology_tradeoffs = request.form.getlist("technology_tradeoff")
+
+        technologies = []
+
+        for name, reason, alternative, tradeoff in zip(
+            technology_names,
+            technology_reasons,
+            technology_alternatives,
+            technology_tradeoffs
+        ):
+            if name.strip():
+                technologies.append({
+                    "name": name.strip(),
+                    "reason": reason.strip(),
+                    "alternative": alternative.strip(),
+                    "tradeoff": tradeoff.strip()
+                })
+        
 
         design_project(
             project_id,
@@ -84,7 +111,7 @@ def design(project_id):
             architecture_overview,
             architecture_components,
             architecture_flow,
-            architecture_technology,
+            technologies,
             must_have,
             nice_to_have,
             constraints,
@@ -102,10 +129,12 @@ def design(project_id):
 
      #GET: retrieve existing design data
     design_data = get_project_design(project_id)
+    technologies = get_technologies(project_id)
     return render_template(
         "design.html",
         project=project,
-        design_data = design_data
+        design_data = design_data,
+        technologies= technologies
     )
 
 
