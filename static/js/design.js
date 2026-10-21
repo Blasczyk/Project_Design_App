@@ -22,37 +22,33 @@ function addBullet(listID, inputName) {
     list.appendChild(item);
 }
 
-function addComponent(){
+
+function addComponent() {
+
     const list = document.getElementById("component-list");
 
     const item = document.createElement("div");
+    item.className = "component-item";
 
-    item.className = "architecture-item";
-    
-    item.innerHTML = `
-        <label> Component Name</label>
-        <input
-            type = "text"
-            name="component_name"
-            placeholder=e.g. SQLite Database"
-            >
-        <label>Responsibility</label>
-        <textarea
-            name="component_responsibility"
-            placeholder="What does this component do?"
-        ></textarea>
+    const input = document.createElement("input");
+    input.type = "text";
+    input.name = "component";
+    input.placeholder = "Enter component";
 
-        <button type="button" class="remove-item">
-            Remove
-        </button>
-        `;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "Remove";
 
-    item.querySelector(".remove-item").addEventListener(
-        "click",
-        () => item.remove()
-    );
+    remove.addEventListener("click", function () {
+        item.remove();
+    });
+
+    item.appendChild(input);
+    item.appendChild(remove);
+
     list.appendChild(item);
 }
+
 
 function addTechnology(){
     const list = document.getElementById("technology-list");

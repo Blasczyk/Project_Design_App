@@ -73,13 +73,16 @@ def design(project_id):
     if request.method == "POST":
 
         problem = request.form.get("problem")
+        must_have_ids = request.form.getlist("must_have_id")
         must_have = request.form.getlist("must_have")
+
+        nice_have_ids = request.form.getlist("nice_have_id")
         nice_to_have = request.form.getlist("nice_have")
         constraints = request.form.getlist("constraints")
         # 
-        architecture_overview = request.form.get("architecture")
-        architecture_components = request.form.getlist("component-list")
-        architecture_flow = request.form.get("data-flow")
+        architecture_overview = request.form.get("architecture_system_overview")
+        architecture_components = request.form.getlist("component")
+        architecture_flow = request.form.get("data_flow")
         risks = request.form.getlist("risks")
        
         # Architecutural Technologies
@@ -87,6 +90,11 @@ def design(project_id):
         technology_reasons = request.form.getlist("technology_reason")
         technology_alternatives = request.form.getlist("technology_alternative")
         technology_tradeoffs = request.form.getlist("technology_tradeoff")
+
+        diagram = request.files.get("architecture_diagram")
+
+        if diagram and diagram.filename:
+            print("Uploaded diagram:", diagram.filename)
 
         technologies = []
 
@@ -103,6 +111,8 @@ def design(project_id):
                     "alternative": alternative.strip(),
                     "tradeoff": tradeoff.strip()
                 })
+
+        print("COMPONENTS RECEIVED:", architecture_components)
         
 
         design_project(
@@ -112,7 +122,9 @@ def design(project_id):
             architecture_components,
             architecture_flow,
             technologies,
+            must_have_ids,
             must_have,
+            nice_have_ids,
             nice_to_have,
             constraints,
             risks
@@ -130,6 +142,7 @@ def design(project_id):
      #GET: retrieve existing design data
     design_data = get_project_design(project_id)
     technologies = get_technologies(project_id)
+    print("TECHNOLOGIES:", technologies)
     return render_template(
         "design.html",
         project=project,
@@ -204,6 +217,28 @@ def delete_project_route(project_id):
     return redirect(url_for("project_repo"))
 
 
+
+@app.route(
+    "/projects/<int:project_id>/requirements/<int:requirement_id>/completion",
+    methods=["POST"]
+)
+def update_requirement(project_id, requirement_id):
+
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict) or type(data.get("completed")) is not bool:
+        return {"error": "Invalid completion value"}, 400
+
+    updated = update_requirement_completion(
+        project_id,
+        requirement_id,
+        data["completed"]
+    )
+
+    if not updated:
+        return {"error": "Requirement not found"}, 404
+
+    return {"success": True}, 200
 
 # @app.route("/learning")
 # def learning():

@@ -10,16 +10,16 @@
                     <a href="{{ url_for('project_dashboard', project_id=project['id']) }}">
                         Project Dashboard
                     </a>
-                    <li><a href="#problem"> Goal</a></li>
+                    <!-- <li><a href="#problem"> Goal</a></li>
                     <li><a href="#requirements"> Requirements</a></li>
                     <li><a href="#constraints"> Constraints</a></li>
                     <li><a href="#architecture"> Architecture</a></li>
-                    <li><a href="#risks"> Risks / Unkowns</a></li>
+                    <li><a href="#risks"> Risks / Unkowns</a></li> -->
                 </ul>
             </nav>
         </header>
 
-        <form action="{{ url_for('design', project_id=project['id']) }}" method="post">
+        <form action="{{ url_for('design', project_id=project['id']) }}" method="POST"  enctype="multipart/form-data">
             
             <section id="problem">
                 <h2>Problem</h2>
@@ -28,28 +28,38 @@
                 <textarea id="problem" name="problem" required>{{ project['problem'] or ''}}</textarea>
                 <br><br>
             </section>
-            
+        
             <section id="requirements">
+    
                 <h2>Requirements</h2>
+
+                <!-- Must Have -->
                 <h3>Must Have</h3>
+
                 <div id="must-have-list">
                     {% for item in design_data.must_have %}
-                        <div class="bullet-item">
-                            <span>•</span>
+                    <div class="bullet-item">
 
-                            <input
-                                type="text"
-                                name="must_have"
-                                value="{{ item['text'] }}"
-                            >
+                        <input
+                            type="hidden"
+                            name="must_have_id"
+                            value="{{ item['id'] }}"
+                        >
 
-                            <button
-                                type="button"
-                                onclick="this.closest('.bullet-item').remove()"
-                            >
-                                Remove
-                            </button>
-                        </div>
+                        <input
+                            type="text"
+                            name="must_have"
+                            value="{{ item['text'] }}"
+                        >
+
+                        <button
+                            type="button"
+                            onclick="this.closest('.bullet-item').remove()"
+                        >
+                            Remove
+                        </button>
+
+                    </div>
                     {% endfor %}
                 </div>
 
@@ -60,33 +70,43 @@
                     + Add Requirement
                 </button>
 
-                <br>
+                <!-- Nice to Have -->
                 <h3>Nice To Have</h3>
+
                 <div id="nice-have-list">
                     {% for item in design_data.nice_to_have %}
-                        <div class="bullet-item">
-                            <input
-                                type="text"
-                                name="nice_have"
-                                value="{{ item['text'] }}"
-                                placeholder="Enter requirement"
-                            >
+                    <div class="bullet-item">
 
-                            <button
-                                type="button"
-                                onclick="this.closest('.bullet-item').remove()"
-                            >
-                                Remove
-                            </button>
-                        </div>
+                        <input
+                            type="hidden"
+                            name="nice_have_id"
+                            value="{{ item['id'] }}"
+                        >
+
+                        <input
+                            type="text"
+                            name="nice_have"
+                            value="{{ item['text'] }}"
+                        >
+
+                        <button
+                            type="button"
+                            onclick="this.closest('.bullet-item').remove()"
+                        >
+                            Remove
+                        </button>
+
+                    </div>
                     {% endfor %}
                 </div>
+
                 <button
                     type="button"
-                    onclick="addBullet('nice-have-list','nice_have')">
+                    onclick="addBullet('nice-have-list', 'nice_have')"
+                >
                     + Add Requirement
                 </button>
-            </section>
+        </section>
             
             
             <section id="constraints">
@@ -133,40 +153,58 @@
                         required>
                         {{ project['architecture'] or ''}}</textarea>
                 </div>
-               <!-- System Components -->
-                <div class="architecture-section">
-                    <h3>2.  System Components</h3>
-                    <p> 
-                        Identify the major components and their responsibilities.
-                    </p>
+          
+                <!-- Architecture Components -->
+                <div class="architecture-section"> 
+
+                    <h3>2. Components</h3>
 
                     <div id="component-list">
-                        <!-- List goes here -->
-                         <input
-                                    type="text"
-                                    name="component"
-                                    placeholder="Enter requirement"
-                                >
+
+                        {% for item in design_data.components %}
+
+                        <div class="component-item">
+
+                            <input
+                                type="text"
+                                name="component"
+                                value="{{ item['text'] }}"
+                                placeholder="Enter component"
+                            >
+
+                            <button
+                                type="button"
+                                onclick="this.closest('.component-item').remove()"
+                            >
+                                Remove
+                            </button>
+
+                        </div>
+
+                        {% endfor %}
+
                     </div>
+
                     <button
                         type="button"
                         onclick="addComponent()"
-                        >
-                    + add Component</button>
+                    >
+                        + Add Component
+                    </button>
+
                 </div>
 
                 <!-- Data Flow and Interactions -->
                 <div class="architecture-section">
+
                     <h3>3. Data Flow & Interactions</h3>
-                    <label for="data-flow">
-                        How does information move through the system?
-                    </label>
 
                     <textarea
-                        id="data-flow"
                         name="data_flow"
-                        rows="5"
-                    ></textarea>
+                        rows="6"
+                        placeholder="Describe how components interact"
+                    >{{ project['architecture_flow'] or '' }}</textarea>
+
                 </div>
                 
                 <!-- Technology Decsisions -->
@@ -182,17 +220,17 @@
                             <input
                                         type="text"
                                         name="technology_name"
-                                        value="{{ item['text'] }}"
+                                        value="{{ item['name'] }}"
                                         placeholder="Technology name"
                                         required
                             >
                             <textarea
                                 name="technology_reason"
-                                placeholder="Reason for chosing"
+                                placeholder="Reason for choosing"
                             >{{ item['reason'] or ''}}</textarea>
                             
                             <textarea
-                                name="tecnology_alternative"
+                                name="technology_alternative"
                                 placeholder="Alternatives considered"
                             > {{ item[ 'alternative'] or ''}}</textarea>
 
@@ -200,7 +238,15 @@
                                 name="technology_tradeoff"
                                 placeholder="The tradeoffs"
                             >{{item['tradeoff'] or ''}}</textarea>
+                            
+                            <button
+                            type="button"
+                            onclick="this.closest('.technology-item').remove()"
+                            >
+                                Remove
+                            </button>
                         </div>
+                        
                         {% endfor %}
                      </div>
                     <button 
@@ -209,22 +255,24 @@
                     >
                         Add Technology
                     </button>
+                    
                 </div>
                     
                 <!-- Architecture Diagram -->
                 <div class="architecture-section">
-                    <h3>5. Architecture Diagram</h3>
-                    <label for="architecture-diagram">
-                        Upload a system architecture diagram.
-                    </label>
-                    
-                    <input
-                        type="file"
-                        id="architecture-diagram"
-                        name="architecture-diagram"
-                        accept=".png,.jpg,.jpeg,.svg,.pdf"
-                        >
-                </div>
+                <h3>5. Architecture Diagram</h3>
+
+                <label for="architecture-diagram">
+                    Upload a system architecture diagram.
+                </label>
+
+                <input
+                    type="file"
+                    id="architecture-diagram"
+                    name="architecture_diagram"
+                    accept=".png,.jpg,.jpeg,.webp"
+                >
+            </div>
                 
 
             </section>

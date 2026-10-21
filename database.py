@@ -81,17 +81,19 @@ def get_all_projects():
     return projects
 
 def design_project(
-    project_id,
-    problem,
-    architecture_overview,
-    architecture_components,
-    architecture_flow,
-    technologies,
-    must_have,
-    nice_to_have,
-    constraints,
-    risks
-):
+            project_id,
+            problem,
+            architecture_overview,
+            architecture_components,
+            architecture_flow,
+            technologies,
+            must_have_ids,
+            must_have,
+            nice_have_ids,
+            nice_to_have,
+            constraints,
+            risks
+        ):
     connection = get_connection()
 
     try:
@@ -175,6 +177,14 @@ def design_project(
                 )
 
         # 5. Save architecture components
+        connection.execute(
+            """
+            DELETE FROM architecture_components
+            WHERE project_id = ?
+            """,
+            (project_id,)
+        )
+
         for position, text in enumerate(architecture_components):
             text = text.strip()
 
@@ -193,11 +203,22 @@ def design_project(
 
         
         # 6. Save technology decisions
+
+        # Remove previously saved technologies for this project
+        connection.execute(
+            """
+            DELETE FROM architecture_technology
+            WHERE project_id = ?
+            """,
+            (project_id,)
+        )
+
+        # Insert the current technology decisions
         for position, technology in enumerate(technologies):
+
             connection.execute(
                 """
-                INSERT INTO architecture_technology
-                (
+                INSERT INTO architecture_technology (
                     project_id,
                     name,
                     reason,
@@ -297,6 +318,16 @@ def get_project_design(project_id):
                 """,
                 (project_id, )
             ).fetchall()
+    
+    components = connection.execute(
+            """
+            SELECT id, text, position
+            FROM architecture_components
+            WHERE project_id = ?
+            ORDER BY position ASC
+            """,
+            (project_id,)
+        ).fetchall()
 
     
     connection.close()
@@ -305,9 +336,9 @@ def get_project_design(project_id):
         "must_have": must_have,
         "nice_to_have": nice_to_have,
         "constraints": constraints,
+        "components": components,
         "risks": risks
     }
-
 def get_technologies(project_id):
     conn = get_connection()
 
@@ -326,6 +357,35 @@ def get_technologies(project_id):
 
     finally:
         conn.close()
+
+
+def update_requirement_completion(
+    project_id,
+    requirement_id,
+    completed
+):
+    connection = get_connection()
+
+    try:
+        with connection:
+            cursor = connection.execute(
+                """
+                UPDATE requirements
+                SET completed = ?
+                WHERE id = ?
+                  AND project_id = ?
+                """,
+                (
+                    int(completed),
+                    requirement_id,
+                    project_id
+                )
+            )
+
+            return cursor.rowcount == 1
+
+    finally:
+        connection.close()
 
 
 def update_project(project_id, title, what, why, success):
