@@ -1,201 +1,165 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Dashboard - {{ project['title'] }}</title>
+    <style>
+        .architecture-section { margin-bottom: 1.5rem; }
+        .diagram-item { margin-bottom: 1.5rem; }
+        .diagram-item img { display: block; max-width: 100%; max-height: 500px; object-fit: contain; }
+        .multiline { white-space: pre-wrap; }
+    </style>
+</head>
 <body>
-    <header> 
-        <h1>Project Dashboard: {{project.title}}</h1>
+    <header>
+        <h1>Project Dashboard: {{ project['title'] }}</h1>
         <div class="project-metadata">
-            <p>
-                <strong>Status:</strong>
-                {{ project['status'] or 'Not Started'}}
-            </p>
-            <p>
-                <strong>Current Stage:</strong>
-                {{project['current_stage'] or 'Not set'}}
-            </p>
-
-            <p>
-                <strong>Progress:</strong>
-                {{project['progress'] or 0}}% 
-            </p>
-
-            <p>
-                <strong>Last updated:</strong>
-                {{project['updated_at' or 'Not updated']}}
-            </p>
-
-            <p>
-                <strong>Next step:</strong>
-                 {{project['up_next'] or 'Nothing Currently'}}
-            </p>
-
-
+            <p><strong>Status:</strong> {{ project['status'] or 'Not Started' }}</p>
+            <p><strong>Current Stage:</strong> {{ project['current_stage'] or 'Not set' }}</p>
+            <p><strong>Progress:</strong> {{ project['progress'] or 0 }}%</p>
+            <p><strong>Last Updated:</strong> {{ project['updated_at'] or 'Not updated' }}</p>
+            <p><strong>Next Step:</strong> {{ project['next_action'] or 'Nothing currently planned' }}</p>
         </div>
-        
-            <!-- <div id="Menu">
-                <ol>
-                    <li class="active"><a href="#"> Project Dashboard</a></li>
-                    <li><a href="{{ url_for('design', project_id=project.id) }}">
-                        Design
-                    </a></li>
-                    <li><a href="{{ url_for('build', project_id=project['id']) }}"> 
-                        Build Plan</a></li>
-                    <li><a href="#"> Build Log</a></li>
-                    <li><a href="#"> Learning</a></li>
-                    <li><a href="{{ url_for('testing', project_id=project['id']) }}"> 
-                        Testing</a></li>
-                    <li><a href="#"> Final Architecture</a></li>
-                    <li><a href="#"> Project Write-Up</a></li>
-                    <li><a href="#"> Retrospection</a></li>
-                    <li><a href="#"> Interview Prep</a></li>
-                    <li><a href="#"> Portfolio / Resume Material</a></li>
-
-                </ol>
-            </div> -->
-            
     </header>
 
     <main>
-        <!-- Project Header -->
-         
-        <!-- Create a outline of what is done here, everything should be static
-          on this page. We should Just see the basic outline of completed part. 
-          Maybe a percent completion as well in the header.-->
-        <section id="project_overview"> 
+        <section id="project_overview">
             <h2>Project Overview</h2>
-            <a href="{{ url_for('edit_project', project_id=project['id']) }}">
-                Edit Project Overview
-            </a>
-            <h3>What I am building</h3>
-                <h4>{{project.what}}</h4>
-            <h3>Why this Project:</h3>
-             <h4>{{project.why}}</h4>
-            <h3>This Project will be successful if:</h3>
-                <h4>{{project.success}}</h4>
-                
-            
+            <a href="{{ url_for('edit_project', project_id=project['id']) }}">Edit Project Overview</a>
+
+            <h3>What I Am Building</h3>
+            <p>{{ project['what'] or 'Not defined.' }}</p>
+
+            <h3>Why This Project</h3>
+            <p>{{ project['why'] or 'Not defined.' }}</p>
+
+            <h3>This Project Will Be Successful If</h3>
+            <p>{{ project['success'] or 'Not defined.' }}</p>
         </section>
 
-        <!------------ Project design section --------------->  
         <section id="project_design">
             <h2>Project Design</h2>
-            <a href="{{ url_for('design', project_id=project['id']) }}">
-                Edit Project Design
-            </a>
+            <a href="{{ url_for('design', project_id=project['id']) }}">Edit Project Design</a>
 
-            <!-- Goal -->
-            <h3>Goal</h3>
-            <p>{{ project['problem'] or 'Not defined' }}</p>
+            <section id="goal">
+                <h3>Goal</h3>
+                <p class="multiline">{{ project['problem'] or 'Not defined.' }}</p>
+            </section>
 
-            <!-- Requirements -->
-            
-            
             <section id="requirements">
                 <h3>Requirements</h3>
-                
-                <h4>Needs to have:</h4>
+                <h4>Must Have</h4>
                 {% for item in design_data.must_have %}
-                <div class="requirement-item">
-                    <input
-                    type="checkbox"
-                    class="requirement-checkbox"
-                    data-requirement-id="{{item['id']}}"
-                    {% if item['completed' ] %} checked{%endif %}
-                    >
-
-                    <label>{{item['text']}}</label>
-                </div>
-                {% endfor %}
-
-
-                <h4> Wants to have:</h4>
-                {% for item in design_data.nice_to_have %}
-                <div class="requirement-item">
-                    <input
-                    type="checkbox"
-                    class="requirement-checkbox"
-                    data-requirement-id="{{ item['id']}}"
-                    {% if item['completed' ] %} checked {% endif %}
-                    >
-
-                    <label > {{item['text']}}</label>
-                </div>
-                {% endfor %}
-                
-            </section>
-            
-            
-
-            <!-- Constraints -->
-            <h3>Constraints</h3>
-            <ul>
-                {% for item in design_data.constraints %}
-                    <li>{{ item['text'] }}</li>
+                    <div class="requirement-item">
+                        <input
+                            type="checkbox"
+                            class="requirement-checkbox"
+                            id="requirement-{{ item['id'] }}"
+                            data-requirement-id="{{ item['id'] }}"
+                            {% if item['completed'] %}checked{% endif %}
+                        >
+                        <label for="requirement-{{ item['id'] }}">{{ item['text'] }}</label>
+                    </div>
                 {% else %}
-                    <li>No constraints defined.</li>
+                    <p>No must-have requirements defined.</p>
                 {% endfor %}
-            </ul>
 
-            <!-- Architecture -->
-            <h3>Architecture</h3>
-            <p>{{ project['architecture'] or 'Not defined' }}</p>
+                <h4>Nice to Have</h4>
+                {% for item in design_data.nice_to_have %}
+                    <div class="requirement-item">
+                        <input
+                            type="checkbox"
+                            class="requirement-checkbox"
+                            id="requirement-{{ item['id'] }}"
+                            data-requirement-id="{{ item['id'] }}"
+                            {% if item['completed'] %}checked{% endif %}
+                        >
+                        <label for="requirement-{{ item['id'] }}">{{ item['text'] }}</label>
+                    </div>
+                {% else %}
+                    <p>No nice-to-have requirements defined.</p>
+                {% endfor %}
+            </section>
 
-            <h3>Components</h3>
-
+            <section id="constraints">
+                <h3>Constraints</h3>
                 <ul>
-                    {% for item in design_data.components %}
+                    {% for item in design_data.constraints %}
                         <li>{{ item['text'] }}</li>
                     {% else %}
-                        <li>No components defined.</li>
+                        <li>No constraints defined.</li>
                     {% endfor %}
                 </ul>
+            </section>
 
-            <h3>Data Flow & Interactions</h3>
+            <section id="architecture">
+                <h3>Project Architecture</h3>
 
-            <p style="white-space: pre-wrap;">{{ project['architecture_flow'] or 'Not defined' }}</p>
-
-
-            <h4>Technology Decisions</h4>
-            {% for technology in technologies %}
-                <div class="technology-item">
-                    <h5>{{ technology['name'] }}</h5>
-                    <p><strong>Reason:</strong> {{ technology['reason'] }}</p>
-                    <p><strong>Alternative:</strong> {{ technology['alternative'] }}</p>
-                    <p><strong>Tradeoff:</strong> {{ technology['tradeoff'] }}</p>
+                <div class="architecture-section">
+                    <h4>1. System Overview</h4>
+                    <p class="multiline">{{ project['architecture'] or 'Not defined.' }}</p>
                 </div>
-            {% else %}
-                <p>No technology decisions recorded.</p>
-            {% endfor %}
 
-            <!-- Risks -->
-            <h3>Risks and Unknowns</h3>
-            <ul>
-                {% for item in design_data.risks %}
-                    <li>{{ item['text'] }}</li>
-                {% else %}
-                    <li>No risks recorded.</li>
-                {% endfor %}
-            </ul>
-        </section>
-        <!-- Current Log -->
-        <section class="recent-log">
-            <h2>Recent Work</h2>
-            <h3>comming soon</h3>
-        </section>
-        <!--Delete Project button  -->
-        <section class="delete-project">
-            <h2>Project Management</h2>
-            <form
-                action="{{ url_for('delete_project_route', project_id=project['id']) }}"
-                method="POST"
-                onsubmit="return confirm('Permanently delete this project?');"
-            >
-                <button type="submit">
-                    Delete Project
-                </button>
-            </form>
+                <div class="architecture-section">
+                    <h4>2. Components</h4>
+                    <ul>
+                        {% for component in design_data.components %}
+                            <li>{{ component['text'] }}</li>
+                        {% else %}
+                            <li>No components defined.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
 
-        </section>      
+                <div class="architecture-section">
+                    <h4>3. Data Flow &amp; Interactions</h4>
+                    <p class="multiline">{{ project['architecture_flow'] or 'Not defined.' }}</p>
+                </div>
+
+                <div class="architecture-section">
+                    <h4>4. Technology Decisions</h4>
+                    {% for technology in technologies %}
+                        <div class="technology-item">
+                            <h5>{{ technology['name'] }}</h5>
+                            <p><strong>Reason:</strong> {{ technology['reason'] or 'Not specified.' }}</p>
+                            <p><strong>Alternatives:</strong> {{ technology['alternative'] or 'Not specified.' }}</p>
+                            <p><strong>Tradeoffs:</strong> {{ technology['tradeoff'] or 'Not specified.' }}</p>
+                        </div>
+                    {% else %}
+                        <p>No technology decisions recorded.</p>
+                    {% endfor %}
+                </div>
+
+                <div class="architecture-section">
+                    <h4>5. Architecture Diagrams</h4>
+                    {% for diagram in diagrams %}
+                        <div class="diagram-item">
+                            <h5>{{ diagram['original_filename'] }}</h5>
+                            <img
+                                src="{{ url_for('serve_architecture_diagram', project_id=project['id'], diagram_id=diagram['id']) }}"
+                                alt="{{ diagram['original_filename'] }}"
+                                class="img-fluid"
+                                loading="lazy"
+                            >
+                        </div>
+                    {% else %}
+                        <p>No architecture diagrams uploaded.</p>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section id="risks">
+                <h3>Risks / Unknowns</h3>
+                <ul>
+                    {% for item in design_data.risks %}
+                        <li>{{ item['text'] }}</li>
+                    {% else %}
+                        <li>No risks recorded.</li>
+                    {% endfor %}
+                </ul>
+            </section>
+        </section>
     </main>
 </body>
-</html> 
+</html>

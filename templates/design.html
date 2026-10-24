@@ -19,8 +19,18 @@
             </nav>
         </header>
 
-        <form action="{{ url_for('design', project_id=project['id']) }}" method="POST"  enctype="multipart/form-data">
-            
+        {% if error %}
+            <div class="validation-error" role="alert">
+                <strong>Unable to save design</strong>
+                <p>{{ error }}</p>
+            </div>
+        {% endif %}
+
+        <form
+            action="{{ url_for('design', project_id=project['id']) }}"
+            method="POST"
+            enctype="multipart/form-data"
+        >  
             <section id="problem">
                 <h2>Problem</h2>
                 <label for="problem">What problem does this project solve? or who
@@ -146,12 +156,11 @@
                     <h3>1. System Overview</h3>
                     <label for="architecture_system_overview">Description of the componnets and how they interact</label>
                     <br>
-                    <textarea 
+                    <textarea
                         id="architecture_system_overview"
-                        name="architecture_system_overview" 
-                        rows= "5"
-                        required>
-                        {{ project['architecture'] or ''}}</textarea>
+                        name="architecture_system_overview"
+                        rows="5"
+                    >{{ form_values.get('architecture_system_overview', project['architecture'] or '') }}</textarea>
                 </div>
           
                 <!-- Architecture Components -->
@@ -203,7 +212,7 @@
                         name="data_flow"
                         rows="6"
                         placeholder="Describe how components interact"
-                    >{{ project['architecture_flow'] or '' }}</textarea>
+                    >{{ form_values.get('data_flow', project['architecture_flow'] or '') }}</textarea>
 
                 </div>
                 
@@ -258,31 +267,22 @@
                     
                 </div>
                     
-                <!-- Architecture Diagram -->
-                <div class="architecture-section">
-                <h3>5. Architecture Diagram</h3>
+                <!-- Architecture Diagram Upload -->
+                <section class="architecture-section">
+                    <h3>Architecture Diagram</h3>
 
-                <label for="architecture-diagram">
-                    Upload a system architecture diagram.
-                </label>
+                    <input
+                        type="file"
+                        id="architecture-diagram"
+                        name="architecture_diagram"
+                        accept=".png,.jpg,.jpeg,.webp"
+                    >
+                </section>
 
-                <input
-                    type="file"
-                    id="architecture-diagram"
-                    name="architecture_diagram"
-                    accept=".png,.jpg,.jpeg,.webp"
-                >
-            </div>
-                
+                <!-- Risks / Unknowns -->
+                <section id="risks">
+                    <h2>Risks / Unknowns</h2>
 
-            </section>
-                
-
-            <br><br>
-            <section id="risks">
-                <h2>Risks / Unknowns</h2>
-                <br>
-                <label for="risks">What do I currently not know how to do?(These should be learning targets)</label>
                     <div id="risk-list">
                         {% for item in design_data.risks %}
                             <div class="bullet-item">
@@ -290,31 +290,66 @@
                                     type="text"
                                     name="risks"
                                     value="{{ item['text'] }}"
-                                    placeholder="Enter requirement"
                                 >
                                 <button
                                     type="button"
                                     onclick="this.closest('.bullet-item').remove()"
                                 >
                                     Remove
-                                </button>   
+                                </button>
                             </div>
                         {% endfor %}
                     </div>
-                <button
-                    type="button"
-                    onclick="addBullet('risk-list','risks')">
-                + Add Risk
-                </button>
-            </section>
-                
-            
-            
-            
-            <br><br>
-            <button type="submit"> Save Design</button>
 
-        </form>
+                    <button
+                        type="button"
+                        onclick="addBullet('risk-list', 'risks')"
+                    >
+                        + Add Risk
+                    </button>
+                </section>
+
+                <!-- ONE Save Button -->
+                <button type="submit">Save Design</button>
+
+            </form>
+
+            <!-- Diagram gallery OUTSIDE the main form -->
+            <section class="architecture-diagrams">
+                <h3>Uploaded Diagrams</h3>
+
+                {% for diagram in diagrams %}
+                    <div class="diagram-item">
+                        <h4>{{ diagram['original_filename'] }}</h4>
+
+                        <img
+                            src="{{ url_for(
+                                'serve_architecture_diagram',
+                                project_id=project['id'],
+                                diagram_id=diagram['id']
+                            ) }}"
+                            alt="{{ diagram['original_filename'] }}"
+                            class="img-fluid"
+                        >
+
+                        <form
+                            method="POST"
+                            action="{{ url_for(
+                                'remove_architecture_diagram',
+                                project_id=project['id'],
+                                diagram_id=diagram['id']
+                            ) }}"
+                        >
+                            <button type="submit"
+                                onclick="return confirm('Delete this diagram?');">
+                                Delete Diagram
+                            </button>
+                        </form>
+                    </div>
+                {% else %}
+                    <p>No diagrams uploaded.</p>
+                {% endfor %}
+            </section>
     <script src="{{ url_for('static', filename='js/design.js') }}"></script>
     </body>
 </html>

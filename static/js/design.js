@@ -1,26 +1,40 @@
+
 function addBullet(listID, inputName) {
     const list = document.getElementById(listID);
 
     const item = document.createElement("div");
     item.className = "bullet-item";
 
-    item.innerHTML = `
-        <span>•</span>
-        <input
-            type="text"
-            name="${inputName}"
-            placeholder="Enter item"
-        >
-        <button
-            type="button"
-            onclick="this.closest('.bullet-item').remove()"
-        >
-            Remove
-        </button>
-    `;
+    // Requirements need an ID field to preserve existing records.
+    if (inputName === "must_have" || inputName === "nice_have") {
+        const hiddenID = document.createElement("input");
+
+        hiddenID.type = "hidden";
+        hiddenID.name = inputName + "_id";
+        hiddenID.value = "";
+
+        item.appendChild(hiddenID);
+    }
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.name = inputName;
+    input.placeholder = "Enter item";
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.textContent = "Remove";
+
+    removeButton.addEventListener("click", function () {
+        item.remove();
+    });
+
+    item.appendChild(input);
+    item.appendChild(removeButton);
 
     list.appendChild(item);
 }
+
 
 
 function addComponent() {
