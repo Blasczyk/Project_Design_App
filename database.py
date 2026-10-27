@@ -657,11 +657,7 @@ def validate_design(
 
 
 
-def update_requirement_completion(
-    project_id,
-    requirement_id,
-    completed
-):
+def update_requirement_completion(project_id, requirement_id, completed):
     connection = get_connection()
 
     try:
@@ -671,17 +667,14 @@ def update_requirement_completion(
             SET completed = ?
             WHERE id = ? AND project_id = ?
             """,
-            (
-                int(completed),
-                requirement_id,
-                project_id
-            )
+            (int(completed), requirement_id, project_id)
         )
 
         if cursor.rowcount != 1:
             raise ValueError("Requirement not found")
 
         connection.commit()
+        return True
 
     except Exception:
         connection.rollback()

@@ -3,6 +3,7 @@ from database import init_db , create_project as db_create_project
 from database import get_project , get_all_projects , design_project , get_project_design, get_connection
 from database import delete_project, update_project, get_technologies , validate_design
 from database import delete_architecture_diagram, get_architecture_diagrams, add_architecture_diagram
+from database import update_requirement_completion
 from pathlib import Path
 from uuid import uuid4
 from PIL import Image, UnidentifiedImageError 
@@ -411,27 +412,47 @@ def delete_project_route(project_id):
 
 
 
+
 @app.route(
-    "/projects/<int:project_id>/requirements/<int:requirement_id>/completion",
+    "/projects/<int:project_id>/requirements/"
+    "<int:requirement_id>/completion",
     methods=["POST"]
 )
 def update_requirement(project_id, requirement_id):
 
+    # 1. Validate JSON request
     data = request.get_json(silent=True)
 
-    if not isinstance(data, dict) or type(data.get("completed")) is not bool:
-        return {"error": "Invalid completion value"}, 400
+    if not isinstance(data, dict):
+        return {"error": "Invalid JSON request"}, 400
 
-    updated = update_requirement_completion(
-        project_id,
-        requirement_id,
-        data["completed"]
-    )
+    completed = data.get("completed")
 
-    if not updated:
-        return {"error": "Requirement not found"}, 404
+    if type(completed) is not bool:
+        return {
+            "error": "Completed must be a boolean"
+        }, 400
 
-    return {"success": True}, 200
+    # 2. Attempt to update requirement
+    try:
+        update_requirement_completion(
+            project_id,
+            requirement_id,
+            completed
+        )
+
+    # 3. Requirement does not exist in this project
+    except ValueError as error:
+        return {
+            "error": str(error)
+        }, 404
+
+    # 4. Return successful response
+    return {
+        "success": True,
+        "completed": completed
+    }, 200
+
 
 
 def save_architecture_diagram(file, project_id):
