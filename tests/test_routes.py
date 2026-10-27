@@ -5,6 +5,10 @@ from pathlib import Path
 from unittest.mock import patch
 import app as app_module
 
+from io import BytesIO
+from PIL import Image
+from werkzeug.datastructures import FileStorage
+
 import database
 from app import app
 
@@ -373,6 +377,272 @@ class TestRoutes(unittest.TestCase):
 
         finally:
             connection.close()
+
+
+    def test_valid_diagram_file_save(self):
+        # Create a temporary upload directory
+        upload_folder = Path(self.temp_dir.name) / "uploads"
+
+        # Generate a real PNG image in memory
+        image_buffer = BytesIO()
+
+        image = Image.new("RGB", (10, 10), "white")
+        image.save(image_buffer, format="PNG")
+        image_buffer.seek(0)
+
+        uploaded_file = FileStorage(
+            stream=image_buffer,
+            filename="architecture.png",
+            content_type="image/png"
+        )
+
+        # Redirect file storage to our temporary directory
+        with patch.object(
+            app_module,
+            "UPLOAD_FOLDER",
+            upload_folder
+        ):
+            result = app_module.save_architecture_diagram(
+                uploaded_file,
+                self.project_id
+            )
+
+        # Verify returned metadata
+        self.assertIsNotNone(result)
+        self.assertEqual(
+            result["original_filename"],
+            "architecture.png"
+        )
+
+        self.assertTrue(
+            result["stored_filename"].endswith(".png")
+        )
+
+        # Verify the physical file exists
+        saved_file = (
+            upload_folder
+            / f"project_{self.project_id}"
+            / result["stored_filename"]
+        )
+
+        self.assertTrue(saved_file.is_file())
+
+        # Verify the saved file is a valid PNG
+        with Image.open(saved_file) as saved_image:
+            self.assertEqual(saved_image.format, "PNG")
+            self.assertEqual(saved_image.size, (10, 10))
+
+
+    def test_invalid_diagram_file_rejected(self):
+        upload_folder = Path(self.temp_dir.name) / "uploads"
+
+        # PNG filename, but the contents are not an image
+        uploaded_file = FileStorage(
+            stream=BytesIO(b"This is not a real PNG image"),
+            filename="invalid.png",
+            content_type="image/png"
+        )
+
+        with patch.object(
+            app_module,
+            "UPLOAD_FOLDER",
+            upload_folder
+        ):
+            with self.assertRaises(ValueError):
+                app_module.save_architecture_diagram(
+                    uploaded_file,
+                    self.project_id
+                )
+
+        # No physical file should have been created
+        project_folder = (
+            upload_folder / f"project_{self.project_id}"
+        )
+
+        if project_folder.exists():
+            self.assertEqual(
+                list(project_folder.iterdir()),
+                []
+            )
+
+
+    def test_diagram_upload_transaction(self):
+        upload_folder = Path(self.temp_dir.name) / "uploads"
+
+        # Generate a valid PNG in memory
+        image_buffer = BytesIO()
+        image = Image.new("RGB", (10, 10), "white")
+        image.save(image_buffer, format="PNG")
+        image_buffer.seek(0)
+
+        # Submit through the actual Flask route
+        with patch.object(
+            app_module,
+            "UPLOAD_FOLDER",
+            upload_folder
+        ):
+            response = self.client.post(
+                f"/projects/{self.project_id}/design",
+                data={
+                    "problem": "Diagram upload test",
+                    "architecture_system_overview": "Test architecture",
+                    "data_flow": "Input to output",
+                    "must_have_id": [str(self.requirement_id)],
+                    "must_have": ["Test requirement"],
+                    "component": ["Test component"],
+                    "architecture_diagram": (
+                        image_buffer,
+                        "architecture.png"
+                    )
+                },
+                content_type="multipart/form-data",
+                follow_redirects=False
+            )
+
+        self.assertEqual(response.status_code, 302)
+
+        # Check the SQLite record
+        connection = database.get_connection()
+
+        try:
+            diagrams = connection.execute(
+                """
+                SELECT original_filename,
+                       stored_filename,
+                       file_path
+                FROM architecture_diagrams
+                WHERE project_id = ?
+                """,
+                (self.project_id,)
+            ).fetchall()
+
+            self.assertEqual(len(diagrams), 1)
+
+            diagram = diagrams[0]
+
+            self.assertEqual(
+                diagram["original_filename"],
+                "architecture.png"
+            )
+
+            # Check the physical file
+            saved_file = (
+                upload_folder / diagram["file_path"]
+            )
+
+            self.assertTrue(saved_file.is_file())
+
+            with Image.open(saved_file) as saved_image:
+                self.assertEqual(saved_image.format, "PNG")
+
+        finally:
+            connection.close()
+
+    
+    def test_diagram_upload_rollback_cleanup(self):
+        upload_folder = Path(self.temp_dir.name) / "uploads"
+
+        # Generate valid PNG
+        image_buffer = BytesIO()
+        image = Image.new("RGB", (10, 10), "white")
+        image.save(image_buffer, format="PNG")
+        image_buffer.seek(0)
+
+        # Capture the original project state
+        connection = database.get_connection()
+
+        try:
+            original = connection.execute(
+                """
+                SELECT problem, architecture, architecture_flow
+                FROM projects
+                WHERE id = ?
+                """,
+                (self.project_id,)
+            ).fetchone()
+
+            original_state = tuple(original)
+
+        finally:
+            connection.close()
+
+        # Force a database failure after file save
+        with (
+            patch.object(
+                app_module,
+                "UPLOAD_FOLDER",
+                upload_folder
+            ),
+            patch.object(
+                app_module,
+                "add_architecture_diagram",
+                side_effect=RuntimeError("Simulated database failure")
+            )
+        ):
+            response = self.client.post(
+                f"/projects/{self.project_id}/design",
+                data={
+                    "problem": "Should be rolled back",
+                    "architecture_system_overview": "Changed architecture",
+                    "data_flow": "Changed flow",
+                    "must_have_id": [str(self.requirement_id)],
+                    "must_have": ["Test requirement"],
+                    "component": ["Changed component"],
+                    "architecture_diagram": (
+                        image_buffer,
+                        "architecture.png"
+                    )
+                },
+                content_type="multipart/form-data",
+                follow_redirects=False
+            )
+
+        # Flask handles unexpected failure
+        self.assertEqual(response.status_code, 500)
+
+        # Verify project changes were rolled back
+        connection = database.get_connection()
+
+        try:
+            current = connection.execute(
+                """
+                SELECT problem, architecture, architecture_flow
+                FROM projects
+                WHERE id = ?
+                """,
+                (self.project_id,)
+            ).fetchone()
+
+            self.assertEqual(
+                tuple(current),
+                original_state
+            )
+
+            diagram_count = connection.execute(
+                """
+                SELECT COUNT(*)
+                FROM architecture_diagrams
+                WHERE project_id = ?
+                """,
+                (self.project_id,)
+            ).fetchone()[0]
+
+            self.assertEqual(diagram_count, 0)
+
+        finally:
+            connection.close()
+
+        # Verify uploaded file was removed
+        project_folder = (
+            upload_folder / f"project_{self.project_id}"
+        )
+
+        if project_folder.exists():
+            self.assertEqual(
+                list(project_folder.iterdir()),
+                []
+            )
+
 
 
 
