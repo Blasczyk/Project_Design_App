@@ -161,5 +161,50 @@
             </section>
         </section>
     </main>
+
+
+    <script>
+    document.querySelectorAll(".requirement-checkbox").forEach(
+        checkbox => {
+
+            checkbox.addEventListener("change", async function () {
+
+                const requirementId = this.dataset.requirementId;
+                const completed = this.checked;
+                const projectId = document.body.dataset.projectId;
+
+                this.disabled = true;
+
+                try {
+                    const response = await fetch(
+                        `/projects/${projectId}/requirements/${requirementId}/completion`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({ completed })
+                        }
+                    );
+
+                    if (!response.ok) {
+                        throw new Error("Failed to save completion status");
+                    }
+
+                } catch (error) {
+                    // Restore the previous checkbox state
+                    this.checked = !completed;
+
+                    console.error(error);
+                    alert("Unable to update requirement completion.");
+
+                } finally {
+                    this.disabled = false;
+                }
+            });
+        }
+    );
+    </script>
+
 </body>
 </html>

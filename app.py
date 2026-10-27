@@ -82,73 +82,118 @@ def project_dashboard(project_id):
     )
 
 
+
 @app.route(
     "/projects/<int:project_id>/design",
     methods=["GET", "POST"]
 )
 def design(project_id):
 
+    # 1. Verify that the project exists
     project = get_project(project_id)
 
     if project is None:
         return "Project not found", 404
 
+    # ==================================================
+    # POST: Validate and save project design
+    # ==================================================
     if request.method == "POST":
 
-        problem = request.form.get("problem")
+        # 2. Retrieve project design fields
+        problem = request.form.get("problem", "")
+
         must_have_ids = request.form.getlist("must_have_id")
         must_have = request.form.getlist("must_have")
 
         nice_have_ids = request.form.getlist("nice_have_id")
         nice_to_have = request.form.getlist("nice_have")
+
         constraints = request.form.getlist("constraints")
-        # 
-        architecture_overview = request.form.get("architecture_system_overview")
+
+        architecture_overview = request.form.get(
+            "architecture_system_overview", ""
+        )
+
         architecture_components = request.form.getlist("component")
-        architecture_flow = request.form.get("data_flow")
+        architecture_flow = request.form.get("data_flow", "")
+
         risks = request.form.getlist("risks")
-       
-        # Architecutural Technologies
+
+        # 3. Retrieve architecture technology fields
         technology_names = request.form.getlist("technology_name")
         technology_reasons = request.form.getlist("technology_reason")
-        technology_alternatives = request.form.getlist("technology_alternative")
-        technology_tradeoffs = request.form.getlist("technology_tradeoff")
+        technology_alternatives = request.form.getlist(
+            "technology_alternative"
+        )
+        technology_tradeoffs = request.form.getlist(
+            "technology_tradeoff"
+        )
 
-        technologies = []
-        technology_counts = [
-            len(technology_names),
-            len(technology_reasons),
-            len(technology_alternatives),
-            len(technology_tradeoffs)
-            ]
-
-        if len(set(technology_counts)) != 1:
-            raise ValueError("Technology fields do not match")
-
-        for name, reason, alternative, tradeoff in zip(
-            technology_names,
-            technology_reasons,
-            technology_alternatives,
-            technology_tradeoffs
-        ):
-            if name.strip():
-                technologies.append({
-                    "name": name.strip(),
-                    "reason": reason.strip(),
-                    "alternative": alternative.strip(),
-                    "tradeoff": tradeoff.strip()
-                })
-
-        print("COMPONENTS RECEIVED:", architecture_components)
-        
-
-        # Step 5.10.2 - Save design and diagram
+        # 4. Initialize resources used during saving
         diagram = request.files.get("architecture_diagram")
         diagram_data = None
         connection = None
 
         try:
-            # Validate the design before making database changes
+
+            # ==========================================
+            # 5. Validate technology field alignment
+            # ==========================================
+            technology_counts = [
+                len(technology_names),
+                len(technology_reasons),
+                len(technology_alternatives),
+                len(technology_tradeoffs)
+            ]
+
+            if len(set(technology_counts)) != 1:
+                raise ValueError(
+                    "Technology fields do not match"
+                )
+
+            # ==========================================
+            # 6. Build technology records
+            # ==========================================
+            technologies = []
+
+            for name, reason, alternative, tradeoff in zip(
+                technology_names,
+                technology_reasons,
+                technology_alternatives,
+                technology_tradeoffs
+            ):
+                name = name.strip()
+                reason = reason.strip()
+                alternative = alternative.strip()
+                tradeoff = tradeoff.strip()
+
+                # Ignore completely empty technology rows
+                if not any((
+                    name,
+                    reason,
+                    alternative,
+                    tradeoff
+                )):
+                    continue
+
+                # Prevent incomplete records without a name
+                if not name:
+                    raise ValueError(
+                        "Technology name is required when "
+                        "other fields are provided"
+                    )
+
+                technologies.append({
+                    "name": name,
+                    "reason": reason,
+                    "alternative": alternative,
+                    "tradeoff": tradeoff
+                })
+
+            # ==========================================
+            # 7. Validate project design fields
+            # ==========================================
             validate_design(
                 problem,
                 architecture_overview,
@@ -161,19 +206,25 @@ def design(project_id):
                 technologies
             )
 
-            # Validate and save the uploaded file
+            # ==========================================
+            # 8. Validate and save diagram file
+            # ==========================================
             if diagram and diagram.filename:
                 diagram_data = save_architecture_diagram(
                     diagram,
                     project_id
                 )
 
-            # Start one database transaction
+            # ==========================================
+            # 9. Begin shared SQLite transaction
+            # ==========================================
             connection = get_connection()
             connection.execute("BEGIN")
 
+            # ==========================================
+            # 10. Save project design
+            # ==========================================
             design_project(
-                connection,
                 project_id,
                 problem,
                 architecture_overview,
@@ -185,29 +236,44 @@ def design(project_id):
                 nice_have_ids,
                 nice_to_have,
                 constraints,
-                risks
+                risks,
+                connection=connection
             )
 
+            # ==========================================
+            # 11. Save diagram metadata
+            # ==========================================
             if diagram_data is not None:
                 add_architecture_diagram(
-                    connection,
                     project_id,
-                    diagram_data
+                    diagram_data,
+                    connection=connection
                 )
 
-            # Commit only after all SQL operations succeed
+            # ==========================================
+            # 12. Commit all database changes
+            # ==========================================
             connection.commit()
 
+        # ==============================================
+        # 13. Handle validation errors
+        # ==============================================
         except ValueError as error:
+
+            # Undo any uncommitted database changes
             if connection is not None:
                 connection.rollback()
 
+            # Remove newly uploaded diagram if necessary
             if diagram_data is not None:
-                uploaded_path = UPLOAD_FOLDER / diagram_data["file_path"]
+                uploaded_path = (
+                    UPLOAD_FOLDER / diagram_data["file_path"]
+                )
                 uploaded_path.unlink(missing_ok=True)
 
-            restored_design, restored_technologies = restore_design_form(
-                request.form
+            # Restore submitted form values
+            restored_design, restored_technologies = (
+                restore_design_form(request.form)
             )
 
             return render_template(
@@ -220,23 +286,37 @@ def design(project_id):
                 error=str(error)
             ), 400
 
+        # ==============================================
+        # 14. Handle unexpected errors
+        # ==============================================
         except Exception:
+
             if connection is not None:
                 connection.rollback()
 
             if diagram_data is not None:
-                uploaded_path = UPLOAD_FOLDER / diagram_data["file_path"]
+                uploaded_path = (
+                    UPLOAD_FOLDER / diagram_data["file_path"]
+                )
                 uploaded_path.unlink(missing_ok=True)
 
-            app.logger.exception("Failed to save project design")
+            app.logger.exception(
+                "Failed to save project design"
+            )
 
             return "Unable to save project design.", 500
 
+        # ==============================================
+        # 15. Always close the database connection
+        # ==============================================
         finally:
+
             if connection is not None:
                 connection.close()
 
-
+        # ==============================================
+        # 16. Redirect after successful save
+        # ==============================================
         return redirect(
             url_for(
                 "project_dashboard",
@@ -244,24 +324,24 @@ def design(project_id):
             )
         )
 
-     #GET: retrieve existing design data
+    # ==================================================
+    # GET: Retrieve existing project design
+    # ==================================================
+
     design_data = get_project_design(project_id)
     technologies = get_technologies(project_id)
     diagrams = get_architecture_diagrams(project_id)
 
-    
-
-
-    
     return render_template(
-    "design.html",
-    project=project,
-    design_data=design_data,
-    technologies=technologies,
-    diagrams=diagrams,
-    form_values={},
-    error=None
-)
+        "design.html",
+        project=project,
+        design_data=design_data,
+        technologies=technologies,
+        diagrams=diagrams,
+        form_values={},
+        error=None
+    )
+
 
 
 @app.route("/projects/<int:project_id>/build", methods =["GET","POST"])
@@ -549,6 +629,41 @@ def restore_design_form(form):
     }
 
     return design_data, technologies
+
+
+@app.route(
+    "/projects/<int:project_id>/requirements/"
+    "<int:requirement_id>/completion",
+    methods=["POST"]
+)
+def set_requirement_completion(project_id, requirement_id):
+
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        return {"error": "Invalid JSON request"}, 400
+
+    completed = data.get("completed")
+
+    if type(completed) is not bool:
+        return {"error": "Completed must be a boolean"}, 400
+
+    try:
+        update_requirement_completion(
+            project_id,
+            requirement_id,
+            completed
+        )
+
+    except ValueError as error:
+        return {"error": str(error)}, 404
+
+    return {
+        "success": True,
+        "completed": completed
+    }, 200
+
+
 
 # @app.route("/learning")
 # def learning():

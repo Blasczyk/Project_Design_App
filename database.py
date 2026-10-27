@@ -81,7 +81,6 @@ def get_all_projects():
     return projects
 
 def design_project(
-    connection,
     project_id,
     problem,
     architecture_overview,
@@ -93,7 +92,8 @@ def design_project(
     nice_have_ids,
     nice_to_have,
     constraints,
-    risks
+    risks,
+    connection=None
 ):
     validate_design(
         problem,
@@ -106,9 +106,14 @@ def design_project(
         architecture_components,
         technologies
     )
+    owns_connection = connection is None
+
+    if owns_connection:
+        connection = get_connection()
 
     try:
-        connection.execute("BEGIN")
+        if owns_connection:
+            connection.execute("BEGIN")
 
         # 1. Update single-value design fields
         cursor = connection.execute(
@@ -329,12 +334,18 @@ def design_project(
                 )
 
 
+            # 8. Commit only if this function owns the connection
+        if owns_connection:
+            connection.commit()
+
     except Exception:
-        connection.rollback()
+        if owns_connection:
+            connection.rollback()
         raise
 
     finally:
-        connection.close()
+        if owns_connection:
+            connection.close()
 
 def get_project_design(project_id):
     '''
@@ -400,7 +411,7 @@ def get_project_design(project_id):
             (project_id,)
         ).fetchall()
 
-    
+  
     connection.close()
 
     return {
@@ -410,6 +421,7 @@ def get_project_design(project_id):
         "components": components,
         "risks": risks
     }
+
 def get_technologies(project_id):
     conn = get_connection()
 
@@ -491,27 +503,51 @@ def delete_project(project_id):
     return deleted
 
 
-def add_architecture_diagram(connection, project_id, diagram_data):
 
-    cursor = connection.execute(
-        """
-        INSERT INTO architecture_diagrams (
-            project_id,
-            original_filename,
-            stored_filename,
-            file_path
-        )
-        VALUES (?, ?, ?, ?)
-        """,
-        (
-            project_id,
-            diagram_data["original_filename"],
-            diagram_data["stored_filename"],
-            diagram_data["file_path"]
-        )
-    )
+def add_architecture_diagram(
+    project_id,
+    diagram_data,
+    connection=None
+):
+    owns_connection = connection is None
 
-    return cursor.lastrowid
+    if owns_connection:
+        connection = get_connection()
+
+    try:
+   
+        cursor = connection.execute(
+            """
+            INSERT INTO architecture_diagrams (
+                project_id,
+                original_filename,
+                stored_filename,
+                file_path
+            )
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                project_id,
+                diagram_data["original_filename"],
+                diagram_data["stored_filename"],
+                diagram_data["file_path"]
+            )
+        )
+
+        if owns_connection:
+            connection.commit()
+
+        return cursor.lastrowid
+
+    except Exception:
+        if owns_connection:
+            connection.rollback()
+        raise
+
+    finally:
+        if owns_connection:
+            connection.close()
+
 
 def get_architecture_diagrams(project_id):
     connection = get_connection()
@@ -619,3 +655,37 @@ def validate_design(
                 )
 
 
+
+
+def update_requirement_completion(
+    project_id,
+    requirement_id,
+    completed
+):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute(
+            """
+            UPDATE requirements
+            SET completed = ?
+            WHERE id = ? AND project_id = ?
+            """,
+            (
+                int(completed),
+                requirement_id,
+                project_id
+            )
+        )
+
+        if cursor.rowcount != 1:
+            raise ValueError("Requirement not found")
+
+        connection.commit()
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
