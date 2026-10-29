@@ -655,9 +655,8 @@ def validate_design(
                 )
 
 
-
-
 def update_requirement_completion(project_id, requirement_id, completed):
+
     connection = get_connection()
 
     try:
@@ -682,3 +681,311 @@ def update_requirement_completion(project_id, requirement_id, completed):
 
     finally:
         connection.close()
+
+
+
+def create_task(
+    project_id,
+    title,
+    description="",
+    status="todo",
+    priority="medium",
+    stage="Implementation"
+):
+    # 1. Validate inputs
+    if not isinstance(title, str) or not title.strip():
+        raise ValueError("Task title is required")
+
+    if len(title) > 200:
+        raise ValueError("Task title exceeds 200 characters")
+
+    if not isinstance(description, str):
+        raise ValueError("Task description must be text")
+
+    if len(description) > 5000:
+        raise ValueError("Task description exceeds 5000 characters")
+
+    valid_statuses = {
+        "todo", "in_progress", "blocked", "done"
+    }
+
+    valid_priorities = {
+        "low", "medium", "high"
+    }
+
+    if status not in valid_statuses:
+        raise ValueError("Invalid task status")
+
+    if priority not in valid_priorities:
+        raise ValueError("Invalid task priority")
+
+    if not isinstance(stage, str) or not stage.strip():
+        raise ValueError("Task stage is required")
+
+    connection = get_connection()
+
+    try:
+        # 2. Confirm project exists
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?",
+            (project_id,)
+        ).fetchone()
+
+        if project is None:
+            raise ValueError("Project not found")
+
+        # 3. Insert task
+        cursor = connection.execute(
+            """
+            INSERT INTO tasks (
+                project_id,
+                title,
+                description,
+                status,
+                priority,
+                stage
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                project_id,
+                title.strip(),
+                description.strip(),
+                status,
+                priority,
+                stage.strip()
+            )
+        )
+
+        task_id = cursor.lastrowid
+
+        connection.commit()
+
+        return task_id
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def get_tasks(project_id):
+    connection = get_connection()
+
+    try:
+        tasks = connection.execute(
+            """
+            SELECT
+                id,
+                project_id,
+                title,
+                description,
+                status,
+                priority,
+                stage,
+                position,
+                created_at,
+                updated_at,
+                completed_at
+            FROM tasks
+            WHERE project_id = ?
+            ORDER BY position ASC, id ASC
+            """,
+            (project_id,)
+        ).fetchall()
+
+        return [dict(task) for task in tasks]
+
+    finally:
+        connection.close()
+
+
+def get_task(project_id, task_id):
+    connection = get_connection()
+
+    try:
+        task = connection.execute(
+            """
+            SELECT
+                id,
+                project_id,
+                title,
+                description,
+                status,
+                priority,
+                stage,
+                position,
+                created_at,
+                updated_at,
+                completed_at
+            FROM tasks
+            WHERE id = ? AND project_id = ?
+            """,
+            (task_id, project_id)
+        ).fetchone()
+
+        return dict(task) if task is not None else None
+
+    finally:
+        connection.close()
+
+
+def update_task(
+    project_id,
+    task_id,
+    title,
+    description="",
+    status="todo",
+    priority="medium",
+    stage="Implementation"
+):
+    # 1. Validate inputs
+    if not isinstance(title, str) or not title.strip():
+        raise ValueError("Task title is required")
+
+    if len(title) > 200:
+        raise ValueError("Task title exceeds 200 characters")
+
+    if not isinstance(description, str):
+        raise ValueError("Task description must be text")
+
+    if len(description) > 5000:
+        raise ValueError("Task description exceeds 5000 characters")
+
+    if status not in {"todo", "in_progress", "blocked", "done"}:
+        raise ValueError("Invalid task status")
+
+    if priority not in {"low", "medium", "high"}:
+        raise ValueError("Invalid task priority")
+
+    if not isinstance(stage, str) or not stage.strip():
+        raise ValueError("Task stage is required")
+
+    connection = get_connection()
+
+    try:
+        # 2. Retrieve existing task and verify ownership
+        existing = connection.execute(
+            """
+            SELECT id, status, completed_at
+            FROM tasks
+            WHERE id = ? AND project_id = ?
+            """,
+            (task_id, project_id)
+        ).fetchone()
+
+        if existing is None:
+            raise ValueError("Task not found")
+
+        # 3. Determine completion timestamp
+        if status == "done":
+            if existing["status"] == "done":
+                completed_at = existing["completed_at"]
+            else:
+                completed_at = connection.execute(
+                    "SELECT CURRENT_TIMESTAMP"
+                ).fetchone()[0]
+        else:
+            completed_at = None
+
+        # 4. Update task
+        connection.execute(
+            """
+            UPDATE tasks
+            SET title = ?,
+                description = ?,
+                status = ?,
+                priority = ?,
+                stage = ?,
+                completed_at = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND project_id = ?
+            """,
+            (
+                title.strip(),
+                description.strip(),
+                status,
+                priority,
+                stage.strip(),
+                completed_at,
+                task_id,
+                project_id
+            )
+        )
+
+        connection.commit()
+        return True
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def delete_task(project_id, task_id):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute(
+            """
+            DELETE FROM tasks
+            WHERE id = ? AND project_id = ?
+            """,
+            (task_id, project_id)
+        )
+
+        if cursor.rowcount != 1:
+            raise ValueError("Task not found")
+
+        connection.commit()
+        return True
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+
+def validate_task(
+    title,
+    description,
+    status,
+    priority,
+    stage
+):
+    if not isinstance(title, str) or not title.strip():
+        raise ValueError("Task title is required")
+
+    if len(title) > 200:
+        raise ValueError("Task title exceeds 200 characters")
+
+    if not isinstance(description, str):
+        raise ValueError("Task description must be text")
+
+    if len(description) > 5000:
+        raise ValueError("Task description exceeds 5000 characters")
+
+    if not isinstance(status, str) or status not in {
+        "todo", "in_progress", "blocked", "done"
+    }:
+        raise ValueError("Invalid task status")
+
+    if not isinstance(priority, str) or priority not in {
+        "low", "medium", "high"
+    }:
+        raise ValueError("Invalid task priority")
+
+    if not isinstance(stage, str) or not stage.strip():
+        raise ValueError("Task stage is required")
+
+
+
+
+

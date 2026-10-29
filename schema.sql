@@ -86,3 +86,54 @@ CREATE TABLE IF NOT EXISTS architecture_diagrams (
         REFERENCES projects(id)
         ON DELETE CASCADE
 );
+
+
+
+CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    project_id INTEGER NOT NULL,
+
+    title TEXT NOT NULL
+        CHECK (length(trim(title)) > 0),
+
+    description TEXT NOT NULL DEFAULT '',
+
+    status TEXT NOT NULL DEFAULT 'todo'
+        CHECK (
+            status IN (
+                'todo',
+                'in_progress',
+                'blocked',
+                'done'
+            )
+        ),
+
+    priority TEXT NOT NULL DEFAULT 'medium'
+        CHECK (
+            priority IN (
+                'low',
+                'medium',
+                'high'
+            )
+        ),
+
+    stage TEXT NOT NULL DEFAULT 'Implementation',
+
+    position INTEGER NOT NULL DEFAULT 0,
+
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TEXT,
+
+    FOREIGN KEY (project_id)
+        REFERENCES projects(id)
+        ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_project_id
+ON tasks(project_id);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_project_status
+ON tasks(project_id, status);
+        

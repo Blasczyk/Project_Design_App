@@ -489,5 +489,311 @@ class TestDatabase(unittest.TestCase):
             connection.close()
 
 
+    def test_create_task(self):
+        project_id = self.create_test_project()
+
+        task_id = database.create_task(
+            project_id=project_id,
+            title="Implement authentication",
+            description="Create login functionality",
+            priority="high"
+        )
+
+        connection = database.get_connection()
+
+        try:
+            task = connection.execute(
+                """
+                SELECT *
+                FROM tasks
+                WHERE id = ? AND project_id = ?
+                """,
+                (task_id, project_id)
+            ).fetchone()
+
+            self.assertIsNotNone(task)
+
+            self.assertEqual(
+                task["title"],
+                "Implement authentication"
+            )
+
+            self.assertEqual(
+                task["description"],
+                "Create login functionality"
+            )
+
+            self.assertEqual(task["status"], "todo")
+            self.assertEqual(task["priority"], "high")
+            self.assertEqual(task["stage"], "Implementation")
+
+        finally:
+            connection.close()
+
+
+
+    def test_get_tasks(self):
+        project_a = self.create_test_project("Project A")
+        project_b = self.create_test_project("Project B")
+
+        # Create two tasks for Project A
+        task_1 = database.create_task(
+            project_id=project_a,
+            title="First task"
+        )
+
+        task_2 = database.create_task(
+            project_id=project_a,
+            title="Second task",
+            priority="high"
+        )
+
+        # Create a task for Project B
+        database.create_task(
+            project_id=project_b,
+            title="Other project task"
+        )
+
+        tasks = database.get_tasks(project_a)
+
+        self.assertEqual(len(tasks), 2)
+
+        self.assertEqual(
+            [task["id"] for task in tasks],
+            [task_1, task_2]
+        )
+
+        self.assertEqual(
+            [task["title"] for task in tasks],
+            ["First task", "Second task"]
+        )
+
+        self.assertEqual(tasks[1]["priority"], "high")
+
+        # Verify that an unknown project has no tasks
+        self.assertEqual(
+            database.get_tasks(999999),
+            []
+        )
+
+
+    def test_get_task(self):
+        project_a = self.create_test_project("Project A")
+        project_b = self.create_test_project("Project B")
+
+        task_id = database.create_task(
+            project_id=project_a,
+            title="Implement task retrieval",
+            description="Retrieve one task by ID",
+            priority="high"
+        )
+
+        # Retrieve from the correct project
+        task = database.get_task(project_a, task_id)
+
+        self.assertIsNotNone(task)
+        self.assertEqual(task["id"], task_id)
+        self.assertEqual(task["project_id"], project_a)
+        self.assertEqual(
+            task["title"],
+            "Implement task retrieval"
+        )
+        self.assertEqual(task["priority"], "high")
+
+        # Task must not be accessible through another project
+        self.assertIsNone(
+            database.get_task(project_b, task_id)
+        )
+
+        # Nonexistent task
+        self.assertIsNone(
+            database.get_task(project_a, 999999)
+        )
+
+
+    def test_update_task(self):
+        project_id = self.create_test_project()
+
+        task_id = database.create_task(
+            project_id=project_id,
+            title="Original task"
+        )
+
+        # Update task details and mark complete
+        result = database.update_task(
+            project_id=project_id,
+            task_id=task_id,
+            title="Updated task",
+            description="Updated description",
+            status="done",
+            priority="high",
+            stage="Testing"
+        )
+
+        self.assertTrue(result)
+
+        task = database.get_task(project_id, task_id)
+
+        self.assertEqual(task["title"], "Updated task")
+        self.assertEqual(
+            task["description"],
+            "Updated description"
+        )
+        self.assertEqual(task["status"], "done")
+        self.assertEqual(task["priority"], "high")
+        self.assertEqual(task["stage"], "Testing")
+        self.assertIsNotNone(task["completed_at"])
+
+        original_completion = task["completed_at"]
+
+        # Editing a completed task must preserve completion time
+        database.update_task(
+            project_id=project_id,
+            task_id=task_id,
+            title="Edited completed task",
+            status="done",
+            priority="high",
+            stage="Testing"
+        )
+
+        task = database.get_task(project_id, task_id)
+
+        self.assertEqual(
+            task["completed_at"],
+            original_completion
+        )
+
+        # Reopening the task clears completion time
+        database.update_task(
+            project_id=project_id,
+            task_id=task_id,
+            title="Reopened task",
+            status="in_progress"
+        )
+
+        task = database.get_task(project_id, task_id)
+
+        self.assertEqual(task["status"], "in_progress")
+        self.assertIsNone(task["completed_at"])
+
+
+    def test_delete_task(self):
+        project_a = self.create_test_project("Project A")
+        project_b = self.create_test_project("Project B")
+
+        task_id = database.create_task(
+            project_id=project_a,
+            title="Task to delete"
+        )
+
+        # Verify task exists
+        self.assertIsNotNone(
+            database.get_task(project_a, task_id)
+        )
+
+        # Another project cannot delete this task
+        with self.assertRaises(ValueError):
+            database.delete_task(project_b, task_id)
+
+        # Original task must still exist
+        self.assertIsNotNone(
+            database.get_task(project_a, task_id)
+        )
+
+        # Delete using the correct project
+        result = database.delete_task(project_a, task_id)
+
+        self.assertTrue(result)
+
+        # Verify deletion
+        self.assertIsNone(
+            database.get_task(project_a, task_id)
+        )
+
+        # Repeated deletion must fail
+        with self.assertRaises(ValueError):
+            database.delete_task(project_a, task_id)
+
+
+    def test_create_task_invalid_inputs(self):
+        project_id = self.create_test_project()
+
+        invalid_cases = [
+            {"title": ""},
+            {"title": "   "},
+            {"title": "X" * 201},
+            {"title": "Valid", "description": "X" * 5001},
+            {"title": "Valid", "status": "invalid"},
+            {"title": "Valid", "priority": "urgent"},
+            {"title": "Valid", "stage": ""},
+        ]
+
+        for case in invalid_cases:
+            with self.subTest(case=case):
+                with self.assertRaises(ValueError):
+                    database.create_task(
+                        project_id=project_id,
+                        **case
+                    )
+
+        # No invalid tasks should have been inserted
+        self.assertEqual(
+            database.get_tasks(project_id),
+            []
+        )
+
+        # Cannot create a task for a nonexistent project
+        with self.assertRaises(ValueError):
+            database.create_task(
+                project_id=999999,
+                title="Orphan task"
+            )
+
+
+    def test_update_task_invalid_inputs(self):
+        project_a = self.create_test_project("Project A")
+        project_b = self.create_test_project("Project B")
+
+        task_id = database.create_task(
+            project_id=project_a,
+            title="Original task"
+        )
+
+        invalid_cases = [
+            {"title": ""},
+            {"title": "X" * 201},
+            {"title": "Valid", "status": "invalid"},
+            {"title": "Valid", "priority": "urgent"},
+            {"title": "Valid", "stage": ""},
+        ]
+
+        for case in invalid_cases:
+            with self.subTest(case=case):
+                with self.assertRaises(ValueError):
+                    database.update_task(
+                        project_id=project_a,
+                        task_id=task_id,
+                        **case
+                    )
+
+        # Another project cannot update this task
+        with self.assertRaises(ValueError):
+            database.update_task(
+                project_id=project_b,
+                task_id=task_id,
+                title="Unauthorized change"
+            )
+
+        # Verify original data remains unchanged
+        task = database.get_task(project_a, task_id)
+
+        self.assertEqual(task["title"], "Original task")
+        self.assertEqual(task["status"], "todo")
+        self.assertEqual(task["priority"], "medium")
+        self.assertIsNone(task["completed_at"])
+
+
+
+
 if __name__ == "__main__":
     unittest.main()
