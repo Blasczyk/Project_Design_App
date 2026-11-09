@@ -644,6 +644,59 @@ class TestRoutes(unittest.TestCase):
             )
 
 
+    def create_test_project(self, title="Test Project"):
+        connection = database.get_connection()
+
+        try:
+            cursor = connection.execute(
+                """
+                INSERT INTO projects (title)
+                VALUES (?)
+                """,
+                (title,)
+            )
+
+            connection.commit()
+            return cursor.lastrowid
+
+        finally:
+            connection.close()
+
+
+    def test_execution_page(self):
+        project_id = self.create_test_project()
+
+        # Create a task for the project
+        database.create_task(
+            project_id=project_id,
+            title="Implement execution page",
+            priority="high"
+        )
+
+        # Request the execution page
+        response = self.client.get(
+            f"/projects/{project_id}/execution"
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        # Verify project and task information appears
+        self.assertIn(
+            b"Implement execution page",
+            response.data
+        )
+
+        self.assertIn(
+            b"high",
+            response.data
+        )
+
+        # Verify nonexistent projects return 404
+        response = self.client.get(
+            "/projects/999999/execution"
+        )
+
+        self.assertEqual(response.status_code, 404)
 
 
 if __name__ == "__main__":

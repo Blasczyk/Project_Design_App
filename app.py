@@ -3,7 +3,7 @@ from database import init_db , create_project as db_create_project
 from database import get_project , get_all_projects , design_project , get_project_design, get_connection
 from database import delete_project, update_project, get_technologies , validate_design
 from database import delete_architecture_diagram, get_architecture_diagrams, add_architecture_diagram
-from database import update_requirement_completion
+from database import update_requirement_completion, get_tasks
 from pathlib import Path
 from uuid import uuid4
 from PIL import Image, UnidentifiedImageError 
@@ -454,7 +454,6 @@ def update_requirement(project_id, requirement_id):
     }, 200
 
 
-
 def save_architecture_diagram(file, project_id):
 
     if not file or not file.filename:
@@ -582,8 +581,6 @@ def remove_architecture_diagram(project_id, diagram_id):
     )
 
 
-
-
 @app.errorhandler(RequestEntityTooLarge)
 def handle_large_upload(error):
     return (
@@ -651,7 +648,6 @@ def restore_design_form(form):
 
     return design_data, technologies
 
-
 @app.route(
     "/projects/<int:project_id>/requirements/"
     "<int:requirement_id>/completion",
@@ -685,30 +681,28 @@ def set_requirement_completion(project_id, requirement_id):
     }, 200
 
 
+@app.route("/projects/<int:project_id>/execution")
+def execution(project_id):
+    connection = get_connection()
 
-# @app.route("/learning")
-# def learning():
-#     return render_template("learning.html")
+    try:
+        project = connection.execute(
+            "SELECT * FROM projects WHERE id = ?",
+            (project_id,)
+        ).fetchone()
+    finally:
+        connection.close()
 
+    if project is None:
+        abort(404)
 
-# @app.route("/log")
-# def log():
-#     return render_template("log.html")
+    tasks = get_tasks(project_id)
 
-
-# @app.route("/interview-prep")
-# def interview_prep():
-#     return render_template("interview_prep.html")
-
-
-# @app.route("/write-up")
-# def write_up():
-#     return render_template("write_up.html")
-
-
-# @app.route("/retrospective")
-# def retrospective():
-#     return render_template("retrospective.html")
+    return render_template(
+        "execution.html",
+        project=project,
+        tasks=tasks
+    )
 
 
 if __name__ == "__main__":

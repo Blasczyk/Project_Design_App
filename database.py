@@ -682,6 +682,37 @@ def update_requirement_completion(project_id, requirement_id, completed):
     finally:
         connection.close()
 
+def validate_task(
+    title,
+    description,
+    status,
+    priority,
+    stage
+):
+    if not isinstance(title, str) or not title.strip():
+        raise ValueError("Task title is required")
+
+    if len(title) > 200:
+        raise ValueError("Task title exceeds 200 characters")
+
+    if not isinstance(description, str):
+        raise ValueError("Task description must be text")
+
+    if len(description) > 5000:
+        raise ValueError("Task description exceeds 5000 characters")
+
+    if not isinstance(status, str) or status not in {
+        "todo", "in_progress", "blocked", "done"
+    }:
+        raise ValueError("Invalid task status")
+
+    if not isinstance(priority, str) or priority not in {
+        "low", "medium", "high"
+    }:
+        raise ValueError("Invalid task priority")
+
+    if not isinstance(stage, str) or not stage.strip():
+        raise ValueError("Task stage is required")
 
 
 def create_task(
@@ -953,37 +984,6 @@ def delete_task(project_id, task_id):
 
 
 
-def validate_task(
-    title,
-    description,
-    status,
-    priority,
-    stage
-):
-    if not isinstance(title, str) or not title.strip():
-        raise ValueError("Task title is required")
-
-    if len(title) > 200:
-        raise ValueError("Task title exceeds 200 characters")
-
-    if not isinstance(description, str):
-        raise ValueError("Task description must be text")
-
-    if len(description) > 5000:
-        raise ValueError("Task description exceeds 5000 characters")
-
-    if not isinstance(status, str) or status not in {
-        "todo", "in_progress", "blocked", "done"
-    }:
-        raise ValueError("Invalid task status")
-
-    if not isinstance(priority, str) or priority not in {
-        "low", "medium", "high"
-    }:
-        raise ValueError("Invalid task priority")
-
-    if not isinstance(stage, str) or not stage.strip():
-        raise ValueError("Task stage is required")
 
 
 
