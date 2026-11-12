@@ -766,6 +766,7 @@ def create_task(
             raise ValueError("Project not found")
 
         # 3. Insert task
+        
         cursor = connection.execute(
             """
             INSERT INTO tasks (
@@ -774,19 +775,26 @@ def create_task(
                 description,
                 status,
                 priority,
-                stage
+                stage,
+                completed_at
             )
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?,
+                    CASE WHEN ? = 'done'
+                        THEN CURRENT_TIMESTAMP
+                        ELSE NULL
+                    END)
             """,
             (
                 project_id,
-                title.strip(),
-                description.strip(),
+                title,
+                description,
                 status,
                 priority,
-                stage.strip()
+                stage,
+                status
             )
         )
+
 
         task_id = cursor.lastrowid
 
@@ -983,6 +991,200 @@ def delete_task(project_id, task_id):
         connection.close()
 
 
+def link_task_requirement(project_id, task_id, requirement_id):
+    connection = get_connection()
+
+    try:
+        # Verify the task belongs to the specified project.
+        task = connection.execute(
+            """
+            SELECT id
+            FROM tasks
+            WHERE id = ? AND project_id = ?
+            """,
+            (task_id, project_id)
+        ).fetchone()
+
+        if task is None:
+            raise ValueError("Task not found in this project")
+
+        # Verify the requirement belongs to the same project.
+        requirement = connection.execute(
+            """
+            SELECT id
+            FROM requirements
+            WHERE id = ? AND project_id = ?
+            """,
+            (requirement_id, project_id)
+        ).fetchone()
+
+        if requirement is None:
+            raise ValueError("Requirement not found in this project")
+
+        # Create the association.
+        connection.execute(
+            """
+            INSERT INTO task_requirements (
+                task_id,
+                requirement_id
+            )
+            VALUES (?, ?)
+            """,
+            (task_id, requirement_id)
+        )
+
+        connection.commit()
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+
+def unlink_task_requirement(project_id, task_id, requirement_id):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute(
+            """
+            DELETE FROM task_requirements
+            WHERE task_id = ?
+              AND requirement_id = ?
+              AND EXISTS (
+                  SELECT 1
+                  FROM tasks
+                  WHERE id = ?
+                    AND project_id = ?
+              )
+              AND EXISTS (
+                  SELECT 1
+                  FROM requirements
+                  WHERE id = ?
+                    AND project_id = ?
+              )
+            """,
+            (
+                task_id,
+                requirement_id,
+                task_id,
+                project_id,
+                requirement_id,
+                project_id
+            )
+        )
+
+        if cursor.rowcount != 1:
+            raise ValueError(
+                "Task-requirement link not found in this project"
+            )
+
+        connection.commit()
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+
+def get_task_requirements(project_id, task_id):
+    connection = get_connection()
+
+    try:
+        # Verify task ownership
+        task = connection.execute(
+            """
+            SELECT id
+            FROM tasks
+            WHERE id = ?
+              AND project_id = ?
+            """,
+            (task_id, project_id)
+        ).fetchone()
+
+        if task is None:
+            raise ValueError("Task not found in this project")
+
+        # Retrieve requirements linked to this task
+        requirements = connection.execute(
+            """
+            SELECT
+                r.id,
+                r.project_id,
+                r.text,
+                r.type,
+                r.completed,
+                r.position
+            FROM requirements AS r
+            JOIN task_requirements AS tr
+                ON tr.requirement_id = r.id
+            WHERE tr.task_id = ?
+              AND r.project_id = ?
+            ORDER BY r.position ASC, r.id ASC
+            """,
+            (task_id, project_id)
+        ).fetchall()
+
+        return [dict(requirement) for requirement in requirements]
+
+    finally:
+        connection.close()
+
+
+def get_project_task_progress(project_id):
+    connection = get_connection()
+
+    try:
+        # Verify the project exists.
+        project = connection.execute(
+            """
+            SELECT id
+            FROM projects
+            WHERE id = ?
+            """,
+            (project_id,)
+        ).fetchone()
+
+        if project is None:
+            raise ValueError("Project not found")
+
+        # Count total and completed tasks.
+        result = connection.execute(
+            """
+            SELECT
+                COUNT(*) AS total_tasks,
+                COUNT(
+                    CASE WHEN status = 'done' THEN 1 END
+                ) AS completed_tasks
+            FROM tasks
+            WHERE project_id = ?
+            """,
+            (project_id,)
+        ).fetchone()
+
+        total = result["total_tasks"]
+        completed = result["completed_tasks"]
+
+        # Avoid division by zero.
+        progress = (
+            round((completed / total) * 100)
+            if total > 0
+            else 0
+        )
+
+        return {
+            "total_tasks": total,
+            "completed_tasks": completed,
+            "progress": progress
+        }
+
+    finally:
+        connection.close()
 
 
 

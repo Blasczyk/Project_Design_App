@@ -137,3 +137,25 @@ ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_project_status
 ON tasks(project_id, status);
         
+
+
+
+-- Many-to-many relationship between tasks and requirements
+CREATE TABLE IF NOT EXISTS task_requirements (
+    task_id INTEGER NOT NULL,
+    requirement_id INTEGER NOT NULL,
+
+    PRIMARY KEY (task_id, requirement_id),
+
+    FOREIGN KEY (task_id)
+        REFERENCES tasks(id)
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (requirement_id)
+        REFERENCES requirements(id)
+        ON DELETE CASCADE
+);
+
+-- Optimize queries that start with a requirement
+CREATE INDEX IF NOT EXISTS idx_task_requirements_requirement
+ON task_requirements(requirement_id);

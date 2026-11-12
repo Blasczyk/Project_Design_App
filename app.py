@@ -3,7 +3,8 @@ from database import init_db , create_project as db_create_project
 from database import get_project , get_all_projects , design_project , get_project_design, get_connection
 from database import delete_project, update_project, get_technologies , validate_design
 from database import delete_architecture_diagram, get_architecture_diagrams, add_architecture_diagram
-from database import update_requirement_completion, get_tasks
+from database import update_requirement_completion, get_tasks, create_task, get_task, update_task, delete_task
+from database import link_task_requirement, unlink_task_requirement, get_task_requirements
 from pathlib import Path
 from uuid import uuid4
 from PIL import Image, UnidentifiedImageError 
@@ -11,7 +12,7 @@ from flask import send_from_directory, abort
 from flask import redirect, url_for, flash
 from werkzeug.exceptions import RequestEntityTooLarge
 import warnings
-
+import sqlite3
 
 
 
@@ -681,8 +682,150 @@ def set_requirement_completion(project_id, requirement_id):
     }, 200
 
 
+
 @app.route("/projects/<int:project_id>/execution")
 def execution(project_id):
+    connection = get_connection()
+
+    try:
+        project = connection.execute(
+            """
+            SELECT *
+            FROM projects
+            WHERE id = ?
+            """,
+            (project_id,)
+        ).fetchone()
+
+        if project is None:
+            abort(404)
+
+        # Retrieve all requirements for this project.
+        requirements = connection.execute(
+            """
+            SELECT
+                id,
+                project_id,
+                text,
+                type,
+                completed,
+                position
+            FROM requirements
+            WHERE project_id = ?
+            ORDER BY position ASC, id ASC
+            """,
+            (project_id,)
+        ).fetchall()
+
+        requirements = [
+            dict(requirement)
+            for requirement in requirements
+        ]
+
+    finally:
+        connection.close()
+
+    # Retrieve tasks using the existing database function.
+    tasks = get_tasks(project_id)
+
+
+    linked_requirements = {}
+
+    for task in tasks:
+        linked_requirements[task["id"]] = get_task_requirements(
+            project_id,
+            task["id"]
+        )
+
+
+    return render_template(
+        "execution.html",
+        project=project,
+        tasks=tasks,
+        requirements=requirements,
+        linked_requirements=linked_requirements
+    )
+
+
+
+
+
+@app.route("/projects/<int:project_id>/tasks/new", methods=["POST"])
+def create_task_route(project_id):
+    connection = get_connection()
+
+    try:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?",
+            (project_id,)
+        ).fetchone()
+    finally:
+        connection.close()
+
+    if project is None:
+        abort(404)
+
+    title = request.form.get("title", "")
+    description = request.form.get("description", "")
+    priority = request.form.get("priority", "medium")
+    stage = request.form.get("stage", "Implementation")
+
+    try:
+        create_task(
+            project_id=project_id,
+            title=title,
+            description=description,
+            priority=priority,
+            stage=stage
+        )
+    except ValueError as error:
+        return str(error), 400
+
+    return redirect(
+        url_for("execution", project_id=project_id)
+    )
+
+
+
+
+
+
+@app.route(
+    "/projects/<int:project_id>/tasks/<int:task_id>/status",
+    methods=["POST"]
+)
+def update_task_status_route(project_id, task_id):
+    task = get_task(project_id, task_id)
+
+    if task is None:
+        abort(404)
+
+    new_status = request.form.get("status", "")
+
+    if new_status not in {"todo", "in_progress", "blocked", "done"}:
+        abort(400)
+
+    update_task(
+        project_id=project_id,
+        task_id=task_id,
+        title=task["title"],
+        description=task["description"],
+        status=new_status,
+        priority=task["priority"],
+        stage=task["stage"]
+    )
+
+    return redirect(
+        url_for("execution", project_id=project_id)
+    )
+
+
+
+@app.route(
+    "/projects/<int:project_id>/tasks/<int:task_id>/edit",
+    methods=["GET", "POST"]
+)
+def edit_task(project_id, task_id):
     connection = get_connection()
 
     try:
@@ -696,13 +839,135 @@ def execution(project_id):
     if project is None:
         abort(404)
 
-    tasks = get_tasks(project_id)
+    task = get_task(project_id, task_id)
+
+    if task is None:
+        abort(404)
+
+    if request.method == "POST":
+        title = request.form.get("title", "")
+        description = request.form.get("description", "")
+        priority = request.form.get("priority", "medium")
+        stage = request.form.get("stage", "Implementation")
+
+        try:
+            update_task(
+                project_id=project_id,
+                task_id=task_id,
+                title=title,
+                description=description,
+                status=task["status"],
+                priority=priority,
+                stage=stage
+            )
+        except ValueError as error:
+            return str(error), 400
+
+        return redirect(
+            url_for("execution", project_id=project_id)
+        )
 
     return render_template(
-        "execution.html",
+        "edit_task.html",
         project=project,
-        tasks=tasks
+        task=task
     )
+
+
+
+@app.route(
+    "/projects/<int:project_id>/tasks/<int:task_id>/delete",
+    methods=["POST"]
+)
+def delete_task_route(project_id, task_id):
+    # Verify that the task belongs to this project.
+    task = get_task(project_id, task_id)
+
+    if task is None:
+        abort(404)
+
+    # Reuse the existing database operation.
+    delete_task(project_id, task_id)
+
+    return redirect(
+        url_for("execution", project_id=project_id)
+    )
+
+
+
+@app.route(
+    "/projects/<int:project_id>/tasks/<int:task_id>/requirements",
+    methods=["POST"]
+)
+def link_task_requirement_route(project_id, task_id):
+
+    # Verify the task exists and belongs to this project.
+    task = get_task(project_id, task_id)
+
+    if task is None:
+        abort(404)
+
+    # Retrieve the requirement ID submitted by the form.
+    requirement_id = request.form.get(
+        "requirement_id",
+        type=int
+    )
+
+    if requirement_id is None:
+        abort(400)
+
+    try:
+        link_task_requirement(
+            project_id,
+            task_id,
+            requirement_id
+        )
+
+    except ValueError:
+        # Requirement missing or belongs to another project.
+        abort(404)
+
+    except sqlite3.IntegrityError:
+        # Duplicate relationship.
+        abort(409)
+
+    return redirect(
+        url_for("execution", project_id=project_id)
+    )
+
+
+
+@app.route(
+    "/projects/<int:project_id>/tasks/<int:task_id>/requirements/<int:requirement_id>/delete",
+    methods=["POST"]
+)
+def unlink_task_requirement_route(
+    project_id,
+    task_id,
+    requirement_id
+):
+    # Verify the task exists in this project.
+    task = get_task(project_id, task_id)
+
+    if task is None:
+        abort(404)
+
+    try:
+        unlink_task_requirement(
+            project_id,
+            task_id,
+            requirement_id
+        )
+
+    except ValueError:
+        # Missing link or invalid project ownership.
+        abort(404)
+
+    return redirect(
+        url_for("execution", project_id=project_id)
+    )
+
+
 
 
 if __name__ == "__main__":

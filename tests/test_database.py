@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+import sqlite3
 
 import database
 
@@ -793,6 +794,487 @@ class TestDatabase(unittest.TestCase):
         self.assertIsNone(task["completed_at"])
 
 
+
+    def test_task_requirements_schema(self):
+        connection = database.get_connection()
+
+        try:
+            # Verify the junction table exists
+            table = connection.execute(
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table'
+                  AND name = 'task_requirements'
+                """
+            ).fetchone()
+
+            self.assertIsNotNone(table)
+
+            # Verify both foreign keys exist
+            foreign_keys = connection.execute(
+                "PRAGMA foreign_key_list(task_requirements)"
+            ).fetchall()
+
+            self.assertEqual(len(foreign_keys), 2)
+
+            referenced_tables = {
+                fk["table"] for fk in foreign_keys
+            }
+
+            self.assertEqual(
+                referenced_tables,
+                {"tasks", "requirements"}
+            )
+
+            # Verify ON DELETE CASCADE
+            for fk in foreign_keys:
+                self.assertEqual(
+                    fk["on_delete"],
+                    "CASCADE"
+                )
+
+            # Verify foreign-key enforcement is enabled
+            enabled = connection.execute(
+                "PRAGMA foreign_keys"
+            ).fetchone()[0]
+
+            self.assertEqual(enabled, 1)
+
+        finally:
+            connection.close()
+
+
+
+    def test_link_task_requirement_success(self):
+        project_id = self.create_test_project()
+
+        task_id = database.create_task(
+            project_id=project_id,
+            title="Implement authentication"
+        )
+
+        connection = database.get_connection()
+        try:
+            cursor = connection.execute(
+                """
+                INSERT INTO requirements
+                    (project_id, text, type, completed, position)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (project_id, "Secure authentication", "must_have", 0, 0)
+            )
+            requirement_id = cursor.lastrowid
+            connection.commit()
+        finally:
+            connection.close()
+
+        database.link_task_requirement(
+            project_id, task_id, requirement_id
+        )
+
+        connection = database.get_connection()
+        try:
+            link = connection.execute(
+                """
+                SELECT *
+                FROM task_requirements
+                WHERE task_id = ? AND requirement_id = ?
+                """,
+                (task_id, requirement_id)
+            ).fetchone()
+
+            self.assertIsNotNone(link)
+        finally:
+            connection.close()
+
+    def test_link_task_requirement_duplicate(self):
+        project_id = self.create_test_project()
+        task_id = database.create_task(project_id, "Test task")
+
+        connection = database.get_connection()
+        try:
+            cursor = connection.execute(
+                """
+                INSERT INTO requirements
+                    (project_id, text, type, completed, position)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (project_id, "Test requirement", "must_have", 0, 0)
+            )
+            requirement_id = cursor.lastrowid
+            connection.commit()
+        finally:
+            connection.close()
+
+        database.link_task_requirement(
+            project_id, task_id, requirement_id
+        )
+
+        with self.assertRaises(sqlite3.IntegrityError):
+            database.link_task_requirement(
+                project_id, task_id, requirement_id
+            )
+
+    def test_link_task_requirement_missing_task(self):
+        project_id = self.create_test_project()
+
+        with self.assertRaises(ValueError):
+            database.link_task_requirement(
+                project_id, 999999, 999999
+            )
+
+    def test_link_task_requirement_cross_project(self):
+        project_a = self.create_test_project("Project A")
+        project_b = self.create_test_project("Project B")
+
+        task_id = database.create_task(project_a, "Project A task")
+
+        connection = database.get_connection()
+        try:
+            cursor = connection.execute(
+                """
+                INSERT INTO requirements
+                    (project_id, text, type, completed, position)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (project_b, "Project B requirement", "must_have", 0, 0)
+            )
+            requirement_id = cursor.lastrowid
+            connection.commit()
+        finally:
+            connection.close()
+
+        with self.assertRaises(ValueError):
+            database.link_task_requirement(
+                project_a, task_id, requirement_id
+            )
+
+
+
+    def test_unlink_task_requirement(self):
+        project_id = self.create_test_project()
+
+        task_id = database.create_task(
+            project_id,
+            "Implement authentication"
+        )
+
+        connection = database.get_connection()
+        try:
+            cursor = connection.execute(
+                """
+                INSERT INTO requirements
+                    (project_id, text, type, completed, position)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    project_id,
+                    "Secure authentication",
+                    "must_have",
+                    0,
+                    0
+                )
+            )
+            requirement_id = cursor.lastrowid
+            connection.commit()
+        finally:
+            connection.close()
+
+        database.link_task_requirement(
+            project_id, task_id, requirement_id
+        )
+
+        database.unlink_task_requirement(
+            project_id, task_id, requirement_id
+        )
+
+        connection = database.get_connection()
+        try:
+            link = connection.execute(
+                """
+                SELECT 1
+                FROM task_requirements
+                WHERE task_id = ?
+                  AND requirement_id = ?
+                """,
+                (task_id, requirement_id)
+            ).fetchone()
+
+            requirement = connection.execute(
+                "SELECT id FROM requirements WHERE id = ?",
+                (requirement_id,)
+            ).fetchone()
+
+            self.assertIsNone(link)
+            self.assertIsNotNone(requirement)
+            self.assertIsNotNone(
+                database.get_task(project_id, task_id)
+            )
+        finally:
+            connection.close()
+
+
+
+    def test_get_task_requirements(self):
+        project_id = self.create_test_project()
+
+        task_id = database.create_task(
+            project_id,
+            "Implement authentication"
+        )
+
+        connection = database.get_connection()
+        try:
+            cursor = connection.execute(
+                """
+                INSERT INTO requirements
+                    (project_id, text, type, completed, position)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    project_id,
+                    "Secure authentication",
+                    "must_have",
+                    0,
+                    0
+                )
+            )
+            requirement_id = cursor.lastrowid
+            connection.commit()
+        finally:
+            connection.close()
+
+        # Initially, the task has no linked requirements.
+        self.assertEqual(
+            database.get_task_requirements(project_id, task_id),
+            []
+        )
+
+        # Link the requirement.
+        database.link_task_requirement(
+            project_id,
+            task_id,
+            requirement_id
+        )
+
+        # Retrieve linked requirements.
+        requirements = database.get_task_requirements(
+            project_id,
+            task_id
+        )
+
+        self.assertEqual(len(requirements), 1)
+        self.assertEqual(
+            requirements[0]["id"],
+            requirement_id
+        )
+        self.assertEqual(
+            requirements[0]["text"],
+            "Secure authentication"
+        )
+        self.assertEqual(
+            requirements[0]["type"],
+            "must_have"
+        )
+
+        # Verify invalid task ownership is rejected.
+        with self.assertRaises(ValueError):
+            database.get_task_requirements(
+                project_id,
+                999999
+            )
+
+
+
+    def test_unlink_task_requirement_missing_link(self):
+        project_id = self.create_test_project()
+
+        task_id = database.create_task(
+            project_id,
+            "Test task"
+        )
+
+        # No relationship exists.
+        with self.assertRaises(ValueError):
+            database.unlink_task_requirement(
+                project_id,
+                task_id,
+                999999
+            )
+
+    def test_unlink_task_requirement_cross_project(self):
+        project_a = self.create_test_project("Project A")
+        project_b = self.create_test_project("Project B")
+
+        task_id = database.create_task(
+            project_a,
+            "Project A task"
+        )
+
+        connection = database.get_connection()
+        try:
+            cursor = connection.execute(
+                """
+                INSERT INTO requirements
+                    (project_id, text, type, completed, position)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    project_a,
+                    "Project A requirement",
+                    "must_have",
+                    0,
+                    0
+                )
+            )
+            requirement_id = cursor.lastrowid
+            connection.commit()
+        finally:
+            connection.close()
+
+        database.link_task_requirement(
+            project_a,
+            task_id,
+            requirement_id
+        )
+
+        # Attempt to remove Project A's link using Project B.
+        with self.assertRaises(ValueError):
+            database.unlink_task_requirement(
+                project_b,
+                task_id,
+                requirement_id
+            )
+
+        # The original relationship must still exist.
+        requirements = database.get_task_requirements(
+            project_a,
+            task_id
+        )
+
+        self.assertEqual(len(requirements), 1)
+        self.assertEqual(
+            requirements[0]["id"],
+            requirement_id
+        )
+
+    def test_link_task_requirement_missing_requirement(self):
+        project_id = self.create_test_project()
+
+        task_id = database.create_task(
+            project_id,
+            "Test task"
+        )
+
+        with self.assertRaises(ValueError):
+            database.link_task_requirement(
+                project_id,
+                task_id,
+                999999
+            )
+
+
+
+    def test_project_task_progress(self):
+        project_id = self.create_test_project()
+
+        # Create four tasks with different statuses.
+        database.create_task(
+            project_id,
+            "Task 1",
+            status="done"
+        )
+
+        database.create_task(
+            project_id,
+            "Task 2",
+            status="done"
+        )
+
+        database.create_task(
+            project_id,
+            "Task 3",
+            status="in_progress"
+        )
+
+        database.create_task(
+            project_id,
+            "Task 4",
+            status="todo"
+        )
+
+        result = database.get_project_task_progress(
+            project_id
+        )
+
+        self.assertEqual(result["total_tasks"], 4)
+        self.assertEqual(result["completed_tasks"], 2)
+        self.assertEqual(result["progress"], 50)
+
+
+    def test_project_task_progress_no_tasks(self):
+        project_id = self.create_test_project()
+
+        result = database.get_project_task_progress(
+            project_id
+        )
+
+        self.assertEqual(result["total_tasks"], 0)
+        self.assertEqual(result["completed_tasks"], 0)
+        self.assertEqual(result["progress"], 0)
+
+
+    def test_project_task_progress_missing_project(self):
+        with self.assertRaises(ValueError):
+            database.get_project_task_progress(-1)
+
+
+    def test_project_task_progress_isolation(self):
+        project_a = self.create_test_project()
+        project_b = self.create_test_project()
+
+        # Project A: 1 of 2 tasks completed.
+        database.create_task(
+            project_a,
+            "Task A1",
+            status="done"
+        )
+
+        database.create_task(
+            project_a,
+            "Task A2",
+            status="todo"
+        )
+
+        # Project B: 2 of 2 tasks completed.
+        database.create_task(
+            project_b,
+            "Task B1",
+            status="done"
+        )
+
+        database.create_task(
+            project_b,
+            "Task B2",
+            status="done"
+        )
+
+        progress_a = database.get_project_task_progress(
+            project_a
+        )
+
+        progress_b = database.get_project_task_progress(
+            project_b
+        )
+
+        self.assertEqual(progress_a["total_tasks"], 2)
+        self.assertEqual(progress_a["completed_tasks"], 1)
+        self.assertEqual(progress_a["progress"], 50)
+
+        self.assertEqual(progress_b["total_tasks"], 2)
+        self.assertEqual(progress_b["completed_tasks"], 2)
+        self.assertEqual(progress_b["progress"], 100)
 
 
 if __name__ == "__main__":
